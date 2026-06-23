@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Condor - نظام المكافآت</title>
+<style>
+:root{--navy:#021D49;--blue:#2159B3;--cyan:#00FAF0;--red:#F45753;--gray:#f4f6fb;--muted:#6b7a99;--success:#16a34a;--warning:#d97706;--danger:#dc2626}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color:var(--navy);min-height:100vh;direction:rtl}
+.screen{display:none;min-height:100vh;flex-direction:column}#loginScreen{display:flex}
+.screen.active{display:flex}
+#loginScreen{background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);align-items:center;justify-content:center;padding:24px}
+.login-card{background:white;border-radius:24px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(2,29,73,0.35);animation:slideUp 0.4s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.logo-wrap{text-align:center;margin-bottom:20px}
+.logo-wrap img{width:180px;object-fit:contain}
+.logo-sub{color:var(--muted);font-size:13px;margin-top:4px}
+.accent-line{height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:2px;margin-bottom:16px}
+.role-label{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;text-align:center}
+.role-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.role-btn{padding:14px 8px;border:2px solid #e2e8f0;border-radius:14px;background:white;cursor:pointer;text-align:center;transition:all 0.2s;font-family:inherit}
+.role-btn .ri{font-size:26px;display:block;margin-bottom:4px}
+.role-btn .rl{font-size:13px;font-weight:700;color:var(--muted)}
+.role-btn.selected{border-color:var(--blue);background:#eef4ff}
+.role-btn.selected .rl{color:var(--blue)}
+.inp-g{margin-bottom:14px}
+.inp-g label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.inp-g input{width:100%;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:15px;outline:none;transition:border-color 0.2s;text-align:right}
+.inp-g input:focus{border-color:var(--blue)}
+.btn-main{width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--blue));color:white;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:opacity 0.2s}
+.btn-main:disabled{opacity:0.5;cursor:not-allowed}
+.topbar{background:linear-gradient(135deg,var(--navy),var(--blue));color:white;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.tb-logo{height:32px;object-fit:contain;filter:brightness(0) invert(1)}
+.tb-user{font-size:13px;font-weight:600;opacity:0.9}
+.tb-out{background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 12px;border-radius:8px;font-family:inherit;font-size:12px;cursor:pointer}
+.content{padding:18px;flex:1}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-box{border-radius:16px;padding:18px 14px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.08)}
+.stat-box.navy{background:linear-gradient(135deg,var(--navy),#1a3a8a);color:white}
+.stat-box.blue{background:linear-gradient(135deg,var(--blue),#3b82f6);color:white}
+.stat-box.green{background:linear-gradient(135deg,#065f46,#16a34a);color:white}
+.stat-box.red{background:linear-gradient(135deg,#991b1b,var(--red));color:white}
+.stat-num{font-size:28px;font-weight:900}
+.stat-lbl{font-size:12px;opacity:0.85;margin-top:3px}
+.card{background:white;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.card-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.fg input{width:100%;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:15px;outline:none;transition:border-color 0.2s;text-align:right;background:white}
+.fg input:focus{border-color:var(--blue)}
+.upload-area{border:2px dashed #cbd5e1;border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--gray)}
+.upload-area:hover{border-color:var(--blue);background:#eef4ff}
+.upload-area input{display:none}
+.upload-icon{font-size:26px;margin-bottom:6px}
+.upload-text{font-size:13px;color:var(--muted);font-weight:600}
+.upload-preview{max-width:100%;max-height:140px;border-radius:8px;margin-top:8px}
+.uploading{font-size:13px;color:var(--blue);font-weight:700;margin-top:8px;display:none}
+.op-item{background:white;border-radius:14px;padding:14px;margin-bottom:8px;box-shadow:0 1px 8px rgba(0,0,0,0.06);border-right:4px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-start}
+.op-item.pending{border-right-color:var(--warning)}
+.op-item.approved{border-right-color:var(--success)}
+.op-item.rejected{border-right-color:var(--danger)}
+.op-name{font-weight:700;font-size:14px}
+.op-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.b-pending{background:#fef3c7;color:var(--warning)}
+.b-approved{background:#dcfce7;color:var(--success)}
+.b-rejected{background:#fee2e2;color:var(--danger)}
+.aop{background:white;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+.aop-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.aop-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.btn-approve{flex:1;padding:10px;background:#dcfce7;color:var(--success);border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.btn-reject{flex:1;padding:10px;background:#fee2e2;color:var(--danger);border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.btn-img{padding:10px 14px;background:#eef4ff;color:var(--blue);border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
+.reward-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9}
+.reward-item:last-child{border-bottom:none}
+.reward-name{font-weight:700;font-size:14px}
+.reward-role{font-size:12px;color:var(--muted)}
+.reward-amt{font-weight:900;font-size:16px;color:var(--success)}
+.bottom-nav{background:white;display:flex;border-top:1px solid #e2e8f0;position:sticky;bottom:0;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.06)}
+.nav-item{flex:1;padding:12px 8px;text-align:center;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--muted);font-size:11px;font-weight:600;transition:color 0.2s}
+.nav-icon{font-size:22px;display:block;margin-bottom:2px}
+.nav-item.active{color:var(--blue)}
+.tabs{display:flex;background:var(--gray);border-radius:12px;padding:4px;margin-bottom:14px}
+.tab{flex:1;padding:9px;text-align:center;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);border:none;background:none;font-family:inherit;transition:all 0.2s}
+.tab.active{background:white;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.success-msg{background:#dcfce7;color:var(--success);padding:12px;border-radius:12px;font-weight:700;font-size:14px;text-align:center;margin-bottom:14px;display:none}
+.error-msg{background:#fee2e2;color:var(--danger);padding:12px;border-radius:12px;font-weight:700;font-size:14px;text-align:center;margin-bottom:14px;display:none}
+.loading{text-align:center;padding:30px;color:var(--muted)}
+.spinner{display:inline-block;width:30px;height:30px;border:3px solid #e2e8f0;border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:30px 20px;color:var(--muted)}
+.empty .ei{font-size:36px;margin-bottom:8px}
+.empty p{font-size:13px}
+.month-badge{background:linear-gradient(135deg,var(--navy),var(--blue));color:white;padding:8px 16px;border-radius:20px;font-size:14px;font-weight:700;display:inline-block;margin-bottom:14px}
+.page-title{font-size:19px;font-weight:900;color:var(--navy);margin-bottom:16px}
+.leaderboard-item{display:flex;align-items:center;padding:12px;background:white;border-radius:14px;margin-bottom:8px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+.lb-rank{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;margin-left:12px;flex-shrink:0}
+.lb-rank.gold{background:linear-gradient(135deg,#f59e0b,#fbbf24);color:white}
+.lb-rank.silver{background:linear-gradient(135deg,#94a3b8,#cbd5e1);color:white}
+.lb-rank.bronze{background:linear-gradient(135deg,#b45309,#d97706);color:white}
+.lb-rank.other{background:var(--gray);color:var(--muted)}
+.lb-info{flex:1}
+.lb-name{font-weight:700;font-size:14px}
+.lb-role{font-size:12px;color:var(--muted)}
+.lb-count{font-weight:900;font-size:16px;color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="screen active">
+  <div class="login-card">
+    <div class="logo-wrap">
+      <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" alt="Condor">
+      <p class="logo-sub">نظام متابعة المكافآت</p>
+    </div>
+    <div class="accent-line"></div>
+    <p class="role-label">اختار نوع حسابك</p>
+    <div class="role-btns">
+      <button class="role-btn" onclick="selectRole('technician')" id="roleT"><span class="ri">🔧</span><span class="rl">فني</span></button>
+      <button class="role-btn" onclick="selectRole('sales')" id="roleS"><span class="ri">💼</span><span class="rl">مبيعات</span></button>
+    </div>
+    <div class="inp-g"><label>رقم التليفون أو رقم البطاقة</label><input type="text" id="lIdentifier" placeholder="رقم التليفون أو البطاقة"></div>
+    <div class="inp-g"><label>كلمة المرور</label><input type="password" id="lPass" placeholder="••••••"></div>
+    <div id="loginErr" class="error-msg"></div>
+    <button class="btn-main" onclick="doLogin()" id="loginBtn">دخول</button>
+    <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">أول مرة؟ <span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="showRegister()">سجل حساب جديد</span></p>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center">
+      <p style="font-size:11px;color:var(--muted);margin-bottom:4px">في مشكلة؟ تواصل معنا</p>
+      <a href="tel:01060005373" style="font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;direction:ltr;display:inline-block">📞 01060005373</a>
+      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.1</p>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div id="registerScreen" class="screen">
+  <div style="background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);min-height:100vh;align-items:center;justify-content:center;padding:24px;display:flex">
+  <div class="login-card" style="max-height:90vh;overflow-y:auto">
+    <div class="logo-wrap">
+      <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" alt="Condor" style="width:140px">
+      <p class="logo-sub">تسجيل حساب جديد</p>
+    </div>
+    <div class="accent-line"></div>
+    <p class="role-label">اختار نوع حسابك</p>
+    <div class="role-btns">
+      <button class="role-btn" onclick="selectRegRole('technician')" id="regRoleT"><span class="ri">🔧</span><span class="rl">فني</span></button>
+      <button class="role-btn" onclick="selectRegRole('sales')" id="regRoleS"><span class="ri">💼</span><span class="rl">مبيعات</span></button>
+    </div>
+    <div class="inp-g"><label>الاسم بالكامل</label><input type="text" id="rName" placeholder="الاسم بالكامل"></div>
+    <div class="inp-g"><label>رقم التليفون</label><input type="tel" id="rPhone" placeholder="01xxxxxxxxx"></div>
+    <div class="inp-g"><label>رقم البطاقة</label><input type="number" id="rNatID" placeholder="رقم البطاقة" inputmode="numeric"></div>
+    <div class="inp-g"><label>رقم محفظة كاش</label><input type="tel" id="rWallet" placeholder="رقم المحفظة"></div>
+    <div class="inp-g"><label>اسم الشركة / الفرع</label><input type="text" id="rCompany" placeholder="اسم الشركة أو الفرع"></div>
+    <div class="inp-g"><label>كلمة المرور</label><input type="password" id="rPass" placeholder="اختار كلمة مرور"></div>
+    <div id="regErr" class="error-msg"></div>
+    <button class="btn-main" onclick="doRegister()" id="regBtn">إنشاء الحساب</button>
+    <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">عندك حساب؟ <span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="showLogin()">سجل دخول</span></p>
+  </div>
+  </div>
+</div>
+
+<!-- TECHNICIAN -->
+<div id="techScreen" class="screen">
+  <div class="topbar">
+    <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" class="tb-logo" alt="Condor">
+    <span class="tb-user" id="techUserName"></span>
+    <button class="tb-out" onclick="logout()">خروج</button>
+  </div>
+  <div id="techHome" class="content">
+    <div class="stats-grid">
+      <div class="stat-box navy"><div class="stat-num" id="tTotalOps">0</div><div class="stat-lbl">إجمالي عملياتي</div></div>
+      <div class="stat-box green"><div class="stat-num" id="tApprovedOps">0</div><div class="stat-lbl">معتمدة هذا الشهر</div></div>
+    </div>
+    <div class="card"><div class="card-title">🕐 آخر عملياتي</div><div id="tRecentOps"><div class="loading"><div class="spinner"></div></div></div></div>
+    <div class="card"><div class="card-title">🏆 أفضل الفنيين هذا الشهر</div><div id="tLeaderboard"></div></div>
+  </div>
+  <div id="techNewOp" class="content" style="display:none">
+    <div class="success-msg" id="tSuccessMsg">✅ تم رفع شهادة الضمان بنجاح!</div>
+    <div class="error-msg" id="tErrMsg"></div>
+    <div class="card">
+      <div class="card-title">🔧 تسجيل تركيب جديد</div>
+      <div class="fg"><label>سيريال الوحدة الداخلية</label><input type="text" id="tSerialIn" placeholder="IN-2024-12345"></div>
+      <div class="fg"><label>سيريال الوحدة الخارجية</label><input type="text" id="tSerialOut" placeholder="OUT-2024-12345"></div>
+      <div class="fg"><label>صوره شهادة الضمان كاملة البيانات</label>
+        <div class="upload-area" onclick="document.getElementById('tImg').click()">
+          <input type="file" id="tImg" accept="image/*" onchange="previewImg(this,'tImgPrev','tUploading')">
+          <div class="upload-icon">📷</div>
+          <div class="upload-text">اضغط لرفع صوره شهادة الضمان كاملة البيانات</div>
+          <img id="tImgPrev" class="upload-preview" style="display:none">
+          <div class="uploading" id="tUploading">⏳ جاري رفع الصورة...</div>
+        </div>
+      </div>
+      <button class="btn-main" onclick="submitTechOp()" id="tSubmitBtn">تسجيل التركيب</button>
+    </div>
+  </div>
+  <div id="techMyOps" class="content" style="display:none">
+    <p class="page-title">عملياتي</p>
+    <div id="tOpsList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="techTab('Home')" id="tNavHome"><span class="nav-icon">🏠</span>الرئيسية</button>
+    <button class="nav-item" onclick="techTab('NewOp')" id="tNavNewOp"><span class="nav-icon">➕</span>تسجيل</button>
+    <button class="nav-item" onclick="techTab('MyOps')" id="tNavMyOps"><span class="nav-icon">📋</span>عملياتي</button>
+  </div>
+</div>
+
+<!-- SALES -->
+<div id="salesScreen" class="screen">
+  <div class="topbar">
+    <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" class="tb-logo" alt="Condor">
+    <span class="tb-user" id="salesUserName"></span>
+    <button class="tb-out" onclick="logout()">خروج</button>
+  </div>
+  <div id="salesHome" class="content">
+    <div class="stats-grid">
+      <div class="stat-box blue"><div class="stat-num" id="sTotalOps">0</div><div class="stat-lbl">إجمالي مبيعاتي</div></div>
+      <div class="stat-box green"><div class="stat-num" id="sApprovedOps">0</div><div class="stat-lbl">معتمدة هذا الشهر</div></div>
+    </div>
+    <div class="card"><div class="card-title">🕐 آخر عملياتي</div><div id="sRecentOps"><div class="loading"><div class="spinner"></div></div></div></div>
+    <div class="card"><div class="card-title">🏆 أفضل المبيعات هذا الشهر</div><div id="sLeaderboard"></div></div>
+  </div>
+  <div id="salesNewOp" class="content" style="display:none">
+    <div class="success-msg" id="sSuccessMsg">✅ تم تسجيل البيع بنجاح!</div>
+    <div class="error-msg" id="sErrMsg"></div>
+    <div class="card">
+      <div class="card-title">💼 تسجيل بيع جديد</div>
+      <div class="fg"><label>اسم العميل</label><input type="text" id="sClient" placeholder="اسم العميل"></div>
+      <div class="fg"><label>اسم الموزع</label><input type="text" id="sDistributor" placeholder="اسم الموزع"></div>
+      <div class="fg"><label>رقم الفاتورة</label><input type="text" id="sInvoice" placeholder="رقم الفاتورة"></div>
+      <div class="fg"><label>صورة الفاتورة</label>
+        <div class="upload-area" onclick="document.getElementById('sImg').click()">
+          <input type="file" id="sImg" accept="image/*" onchange="previewImg(this,'sImgPrev','sUploading')">
+          <div class="upload-icon">🧾</div>
+          <div class="upload-text">اضغط لرفع صورة الفاتورة</div>
+          <img id="sImgPrev" class="upload-preview" style="display:none">
+          <div class="uploading" id="sUploading">⏳ جاري رفع الصورة...</div>
+        </div>
+      </div>
+      <button class="btn-main" onclick="submitSalesOp()" id="sSubmitBtn">تسجيل البيع</button>
+    </div>
+  </div>
+  <div id="salesMyOps" class="content" style="display:none">
+    <p class="page-title">عملياتي</p>
+    <div id="sOpsList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="salesTab('Home')" id="sNavHome"><span class="nav-icon">🏠</span>الرئيسية</button>
+    <button class="nav-item" onclick="salesTab('NewOp')" id="sNavNewOp"><span class="nav-icon">➕</span>تسجيل</button>
+    <button class="nav-item" onclick="salesTab('MyOps')" id="sNavMyOps"><span class="nav-icon">📋</span>عملياتي</button>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminScreen" class="screen">
+  <div class="topbar">
+    <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" class="tb-logo" alt="Condor">
+    <span class="tb-user">👑 المدير</span>
+    <button class="tb-out" onclick="logout()">خروج</button>
+  </div>
+  <div id="adminHome" class="content">
+    <div class="stats-grid">
+      <div class="stat-box navy"><div class="stat-num" id="aPending">0</div><div class="stat-lbl">في الانتظار</div></div>
+      <div class="stat-box green"><div class="stat-num" id="aApproved">0</div><div class="stat-lbl">معتمدة</div></div>
+      <div class="stat-box red"><div class="stat-num" id="aRejected">0</div><div class="stat-lbl">مرفوضة</div></div>
+      <div class="stat-box blue"><div class="stat-num" id="aTotal">0</div><div class="stat-lbl">إجمالي</div></div>
+    </div>
+    <div class="card"><div class="card-title">⏳ بانتظار الاعتماد</div><div id="aPendingList"><div class="loading"><div class="spinner"></div></div></div></div>
+  </div>
+  <div id="adminAllOps" class="content" style="display:none">
+    <div class="tabs">
+      <button class="tab active" onclick="filterOps('all')" id="fAll">الكل</button>
+      <button class="tab" onclick="filterOps('technician')" id="fTech">فنيين</button>
+      <button class="tab" onclick="filterOps('sales')" id="fSales">مبيعات</button>
+    </div>
+    <div id="aAllList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+  <div id="adminRewards" class="content" style="display:none">
+    <p class="page-title">تقرير المكافآت</p>
+    <div class="month-badge" id="curMonth"></div>
+    <div class="card">
+      <div class="card-title">💰 إعدادات المكافآت</div>
+      <div class="fg"><label>مكافأة الفني (لكل تركيب) - جنيه</label><input type="number" id="techAmt" value="150" min="0"></div>
+      <div class="fg"><label>مكافأة المبيعات (لكل بيعة) - جنيه</label><input type="number" id="salesAmt" value="150" min="0"></div>
+      <button class="btn-main" onclick="calcRewards()">حساب المكافآت</button>
+    </div>
+    <div class="card" id="rewardResult" style="display:none"><div class="card-title">📊 نتيجة المكافآت</div><div id="rewardList"></div></div>
+    <div class="card"><div class="card-title">🏆 ترتيب أفضل المستخدمين</div><div id="adminLeaderboard"></div></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="adminTab('Home')" id="aNavHome"><span class="nav-icon">🏠</span>الرئيسية</button>
+    <button class="nav-item" onclick="adminTab('AllOps')" id="aNavAllOps"><span class="nav-icon">📋</span>العمليات</button>
+    <button class="nav-item" onclick="adminTab('Rewards')" id="aNavRewards"><span class="nav-icon">💰</span>المكافآت</button>
+  </div>
+</div>
+
+<script>
+const API='https://script.google.com/macros/s/AKfycbwcuAB7ureLdEpz8XSKfMLDxbwrxbrqZhC1QdLtBZgBaICZksSLq94kUvamvz5_GnRQ/exec';
+const CLOUD_NAME='dqkshie0p';
+const UPLOAD_PRESET='ml_default';
+const ADMIN_USER='Mahmoudkamal';
+const ADMIN_PASS='1Asdfghjkl1@';
+
+let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[];
+
+// ======= LOCAL STORAGE للمستخدمين =======
+function getLocalUsers(){
+  try{return JSON.parse(localStorage.getItem('condor_users')||'[]');}catch(e){return[];}
+}
+function saveLocalUser(u){
+  const users=getLocalUsers();
+  users.push(u);
+  localStorage.setItem('condor_users',JSON.stringify(users));
+}
+function findLocalUser(identifier,pass){
+  const users=getLocalUsers();
+  return users.find(u=>(u.phone===identifier||u.natid===identifier)&&u.pass===pass);
+}
+
+// ======= LOCAL STORAGE للعمليات =======
+function getLocalOps(){
+  try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}
+}
+function saveLocalOp(op){
+  const ops=getLocalOps();
+  ops.push(op);
+  localStorage.setItem('condor_ops',JSON.stringify(ops));
+}
+
+async function postToAPI(data){
+  try{
+    await fetch(API,{method:'POST',body:JSON.stringify(data),mode:'no-cors',headers:{'Content-Type':'application/json'}});
+  }catch(e){console.log('API post error:',e);}
+}
+
+async function uploadToCloudinary(file){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('upload_preset',UPLOAD_PRESET);
+  const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,{method:'POST',body:fd});
+  const data=await r.json();
+  return data.secure_url;
+}
+
+function previewImg(input,prevId,uploadingId){
+  if(input.files&&input.files[0]){
+    const r=new FileReader();
+    r.onload=e=>{
+      document.getElementById(prevId).src=e.target.result;
+      document.getElementById(prevId).style.display='block';
+    };
+    r.readAsDataURL(input.files[0]);
+  }
+}
+
+function selectRole(r){
+  selectedRole=r;
+  document.querySelectorAll('#loginScreen .role-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById(r==='technician'?'roleT':'roleS').classList.add('selected');
+}
+
+function selectRegRole(r){
+  regRole=r;
+  document.querySelectorAll('#registerScreen .role-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById(r==='technician'?'regRoleT':'regRoleS').classList.add('selected');
+}
+
+function showErr(el,msg){el.textContent=msg;el.style.display='block';}
+function hideAll(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));}
+function showLogin(){hideAll();document.getElementById('loginScreen').classList.add('active');}
+function showRegister(){hideAll();document.getElementById('registerScreen').classList.add('active');}
+
+async function doRegister(){
+  const name=document.getElementById('rName').value.trim();
+  const phone=document.getElementById('rPhone').value.trim();
+  const natid=document.getElementById('rNatID').value.trim();
+  const wallet=document.getElementById('rWallet').value.trim();
+  const company=document.getElementById('rCompany').value.trim();
+  const pass=document.getElementById('rPass').value.trim();
+  const errEl=document.getElementById('regErr');
+  errEl.style.display='none';
+
+  if(!regRole){showErr(errEl,'اختار نوع حسابك');return;}
+  if(!name){showErr(errEl,'اكتب اسمك');return;}
+  if(!phone){showErr(errEl,'اكتب رقم تليفونك');return;}
+  if(!natid){showErr(errEl,'اكتب رقم البطاقة');return;}
+  if(!wallet){showErr(errEl,'اكتب رقم المحفظة');return;}
+  if(!company){showErr(errEl,'اكتب اسم الشركة');return;}
+  if(!pass){showErr(errEl,'اكتب كلمة المرور');return;}
+
+  // تحقق من عدم تكرار رقم التليفون أو البطاقة
+  const existing=getLocalUsers();
+  if(existing.find(u=>u.phone===phone)){showErr(errEl,'رقم التليفون مسجل من قبل');return;}
+  if(existing.find(u=>u.natid===natid)){showErr(errEl,'رقم البطاقة مسجل من قبل');return;}
+
+  const btn=document.getElementById('regBtn');
+  btn.disabled=true;btn.textContent='جاري التسجيل...';
+
+  const id=Date.now();
+  const userData={id,type:regRole,name,phone,natid,wallet,company,pass,date:new Date().toLocaleDateString('ar-EG')};
+
+  // حفظ محلي أولاً
+  saveLocalUser(userData);
+
+  // إرسال للسيرفر
+  const row=[id,regRole,name,phone,natid,wallet,company,pass,new Date().toLocaleDateString('ar-EG')];
+  await postToAPI({sheet:'users',row});
+
+  alert('✅ تم التسجيل بنجاح! سجل دخولك دلوقتي');
+  showLogin();
+  btn.disabled=false;btn.textContent='إنشاء الحساب';
+}
+
+async function doLogin(){
+  const identifier=document.getElementById('lIdentifier').value.trim();
+  const pass=document.getElementById('lPass').value.trim();
+  const errEl=document.getElementById('loginErr');
+  errEl.style.display='none';
+
+  if(identifier===ADMIN_USER&&pass===ADMIN_PASS){
+    currentUser=ADMIN_USER;currentRole='admin';
+    showAdminScreen();return;
+  }
+
+  if(!identifier){showErr(errEl,'اكتب رقم التليفون أو البطاقة');return;}
+  if(!pass){showErr(errEl,'اكتب كلمة المرور');return;}
+
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true;btn.textContent='جاري الدخول...';
+
+  // أولاً: جرب Local Storage
+  const localUser=findLocalUser(identifier,pass);
+  if(localUser){
+    currentUserData={id:localUser.id,type:localUser.type,name:localUser.name,phone:localUser.phone,natid:localUser.natid,wallet:localUser.wallet,company:localUser.company};
+    currentUser=localUser.name;currentRole=localUser.type;
+    btn.disabled=false;btn.textContent='دخول';
+    if(currentRole==='technician')showTechScreen();
+    else showSalesScreen();
+    return;
+  }
+
+  // ثانياً: جرب من السيرفر
+  try{
+    const r=await fetch(API+'?sheet=users');
+    const rows=await r.json();
+    const users=rows.slice(1);
+    const user=users.find(u=>(u[3]===identifier||u[4]===identifier)&&u[7]===pass);
+    if(user){
+      currentUserData={id:user[0],type:user[1],name:user[2],phone:user[3],natid:user[4],wallet:user[5],company:user[6]};
+      currentUser=user[2];currentRole=user[1];
+      // حفظ محلي للمرات الجاية
+      saveLocalUser({id:user[0],type:user[1],name:user[2],phone:user[3],natid:user[4],wallet:user[5],company:user[6],pass:pass});
+      btn.disabled=false;btn.textContent='دخول';
+      if(currentRole==='technician')showTechScreen();
+      else showSalesScreen();
+    }else{
+      showErr(errEl,'رقم التليفون أو البطاقة أو كلمة المرور غلط');
+      btn.disabled=false;btn.textContent='دخول';
+    }
+  }catch(e){
+    showErr(errEl,'حصل خطأ في الاتصال، جرب تاني');
+    btn.disabled=false;btn.textContent='دخول';
+  }
+}
+
+function showTechScreen(){
+  hideAll();
+  document.getElementById('techUserName').textContent=currentUser;
+  document.getElementById('techScreen').classList.add('active');
+  techTab('Home');loadOps();
+}
+
+function showSalesScreen(){
+  hideAll();
+  document.getElementById('salesUserName').textContent=currentUser;
+  document.getElementById('salesScreen').classList.add('active');
+  salesTab('Home');loadOps();
+}
+
+function showAdminScreen(){
+  hideAll();
+  document.getElementById('adminScreen').classList.add('active');
+  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  document.getElementById('curMonth').textContent=months[new Date().getMonth()]+' '+new Date().getFullYear();
+  adminTab('Home');loadOps();
+}
+
+function logout(){
+  currentUser=null;currentRole=null;currentUserData=null;selectedRole=null;regRole=null;allOps=[];
+  hideAll();document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('lIdentifier').value='';document.getElementById('lPass').value='';
+}
+
+function techTab(tab){
+  ['Home','NewOp','MyOps'].forEach(t=>{
+    document.getElementById('tech'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tNav'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='Home')renderTechHome();
+  if(tab==='MyOps')renderMyOps();
+}
+
+function salesTab(tab){
+  ['Home','NewOp','MyOps'].forEach(t=>{
+    document.getElementById('sales'+t).style.display=t===tab?'block':'none';
+    document.getElementById('sNav'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='Home')renderSalesHome();
+  if(tab==='MyOps')renderSalesMyOps();
+}
+
+function adminTab(tab){
+  ['Home','AllOps','Rewards'].forEach(t=>{
+    document.getElementById('admin'+t).style.display=t===tab?'block':'none';
+    document.getElementById('aNav'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='Home')renderAdminHome();
+  if(tab==='AllOps')renderAllOps('all');
+  if(tab==='Rewards'){calcRewards();renderLeaderboard('adminLeaderboard');}
+}
+
+async function loadOps(){
+  // دمج العمليات المحلية مع السيرفر
+  const localOps=getLocalOps();
+  try{
+    const r=await fetch(API+'?sheet=operations');
+    const rows=await r.json();
+    const serverOps=rows.slice(1).map(r=>({
+      id:String(r[0]),type:r[1],user:r[2],phone:r[3],
+      serialIn:r[4],serialOut:r[5],client:r[6],distributor:r[13]||'',invoice:r[14]||'',
+      imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10])
+    }));
+    // دمج بدون تكرار
+    const serverIds=new Set(serverOps.map(o=>String(o.id)));
+    const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
+    allOps=[...serverOps,...onlyLocal];
+  }catch(e){
+    allOps=localOps;
+  }
+  if(currentRole==='technician')renderTechHome();
+  else if(currentRole==='sales')renderSalesHome();
+  else renderAdminHome();
+}
+
+async function submitTechOp(){
+  const sin=document.getElementById('tSerialIn').value.trim();
+  const sout=document.getElementById('tSerialOut').value.trim();
+  const imgInput=document.getElementById('tImg');
+  const errEl=document.getElementById('tErrMsg');
+  errEl.style.display='none';
+
+  if(!sin){showErr(errEl,'ادخل سيريال الوحدة الداخلية');return;}
+  if(!sout){showErr(errEl,'ادخل سيريال الوحدة الخارجية');return;}
+  if(!imgInput.files[0]){showErr(errEl,'ارفع صورة شهادة الضمان');return;}
+
+  const btn=document.getElementById('tSubmitBtn');
+
+  try{
+    // منع تكرار السيريال
+    const dupIn=allOps.find(o=>o.serialIn&&String(o.serialIn).toLowerCase()===sin.toLowerCase());
+    if(dupIn){showErr(errEl,'سيريال الوحدة الداخلية مسجل من قبل!');return;}
+    const dupOut=allOps.find(o=>o.serialOut&&String(o.serialOut).toLowerCase()===sout.toLowerCase());
+    if(dupOut){showErr(errEl,'سيريال الوحدة الخارجية مسجل من قبل!');return;}
+
+    btn.disabled=true;btn.textContent='جاري الرفع...';
+    document.getElementById('tUploading').style.display='block';
+
+    let imgUrl='';
+    try{
+      imgUrl=await uploadToCloudinary(imgInput.files[0]);
+    }catch(e){
+      document.getElementById('tUploading').style.display='none';
+      showErr(errEl,'فشل رفع الصورة، جرب تاني');
+      btn.disabled=false;btn.textContent='تسجيل التركيب';
+      return;
+    }
+
+    const op={
+      id:String(Date.now()),type:'technician',user:currentUser,
+      phone:currentUserData?.phone||'',
+      serialIn:sin,serialOut:sout,client:'',distributor:'',invoice:'',
+      imgUrl,status:'pending',
+      date:new Date().toLocaleDateString('ar-EG'),
+      month:new Date().getMonth()
+    };
+
+    // حفظ محلي أولاً
+    saveLocalOp(op);
+    allOps.push(op);
+
+    // إرسال للسيرفر (في الخلفية - مش بيوقف النجاح)
+    try{
+      const row=[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month];
+      await postToAPI({sheet:'operations',row});
+    }catch(e){console.log('Server sync failed, saved locally');}
+
+    document.getElementById('tSerialIn').value='';
+    document.getElementById('tSerialOut').value='';
+    document.getElementById('tImg').value='';
+    document.getElementById('tImgPrev').style.display='none';
+    document.getElementById('tUploading').style.display='none';
+    const msg=document.getElementById('tSuccessMsg');
+    msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    renderTechHome();
+    btn.disabled=false;btn.textContent='تسجيل التركيب';
+  }catch(e){
+    console.log('submitTechOp error:',e);
+    document.getElementById('tUploading').style.display='none';
+    showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');
+    btn.disabled=false;btn.textContent='تسجيل التركيب';
+  }
+}
+
+
+async function submitSalesOp(){
+  const client=document.getElementById('sClient').value.trim();
+  const distributor=document.getElementById('sDistributor').value.trim();
+  const invoice=document.getElementById('sInvoice').value.trim();
+  const imgInput=document.getElementById('sImg');
+  const errEl=document.getElementById('sErrMsg');
+  errEl.style.display='none';
+
+  if(!client){showErr(errEl,'ادخل اسم العميل');return;}
+  if(!distributor){showErr(errEl,'ادخل اسم الموزع');return;}
+  if(!invoice){showErr(errEl,'ادخل رقم الفاتورة');return;}
+  if(!imgInput.files[0]){showErr(errEl,'ارفع صورة الفاتورة');return;}
+
+  const btn=document.getElementById('sSubmitBtn');
+
+  try{
+    // منع تكرار رقم الفاتورة
+    const dupInv=allOps.find(o=>o.invoice&&String(o.invoice)===invoice);
+    if(dupInv){showErr(errEl,'رقم الفاتورة ده مسجل من قبل!');return;}
+
+    btn.disabled=true;btn.textContent='جاري الرفع...';
+    document.getElementById('sUploading').style.display='block';
+
+    let imgUrl='';
+    try{
+      imgUrl=await uploadToCloudinary(imgInput.files[0]);
+    }catch(e){
+      document.getElementById('sUploading').style.display='none';
+      showErr(errEl,'فشل رفع الصورة، جرب تاني');
+      btn.disabled=false;btn.textContent='تسجيل البيع';
+      return;
+    }
+
+    const op={
+      id:String(Date.now()),type:'sales',user:currentUser,
+      phone:currentUserData?.phone||'',
+      serialIn:'',serialOut:'',client,distributor,invoice,
+      imgUrl,status:'pending',
+      date:new Date().toLocaleDateString('ar-EG'),
+      month:new Date().getMonth()
+    };
+
+    // حفظ محلي أولاً
+    saveLocalOp(op);
+    allOps.push(op);
+
+    // إرسال للسيرفر (في الخلفية)
+    try{
+      const row=[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',distributor,invoice];
+      await postToAPI({sheet:'operations',row});
+    }catch(e){console.log('Server sync failed, saved locally');}
+
+    document.getElementById('sClient').value='';
+    document.getElementById('sDistributor').value='';
+    document.getElementById('sInvoice').value='';
+    document.getElementById('sImg').value='';
+    document.getElementById('sImgPrev').style.display='none';
+    document.getElementById('sUploading').style.display='none';
+    const msg=document.getElementById('sSuccessMsg');
+    msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    renderSalesHome();
+    btn.disabled=false;btn.textContent='تسجيل البيع';
+  }catch(e){
+    console.log('submitSalesOp error:',e);
+    document.getElementById('sUploading').style.display='none';
+    showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');
+    btn.disabled=false;btn.textContent='تسجيل البيع';
+  }
+}
+
+async function updateStatus(id,status){
+  const op=allOps.find(o=>String(o.id)===String(id));
+  if(!op)return;
+  op.status=status;
+  // تحديث محلي دايماً
+  const localOps=getLocalOps();
+  const lo=localOps.find(o=>String(o.id)===String(id));
+  if(lo){lo.status=status;}
+  else{localOps.push({...op});}
+  localStorage.setItem('condor_ops',JSON.stringify(localOps));
+  // إرسال للسيرفر في الخلفية
+  try{
+    await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});
+  }catch(e){console.log('Status sync failed, saved locally');}
+  // تحديث الشاشة دايماً
+  renderAdminHome();
+  renderAllOps('all');
+}
+
+function opHTML(o){
+  const badge=o.status==='pending'?'<span class="badge b-pending">⏳ انتظار</span>':o.status==='approved'?'<span class="badge b-approved">✅ معتمد</span>':'<span class="badge b-rejected">❌ مرفوض</span>';
+  const main=o.type==='technician'?`داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`:`عميل: ${o.client}${o.invoice?' | فاتورة: '+o.invoice:''}`;
+  return `<div class="op-item ${o.status}"><div><div class="op-name">${o.type==='technician'?'🔧':'💼'} ${o.user}</div><div class="op-meta">${main}</div><div class="op-meta">${o.date}</div></div>${badge}</div>`;
+}
+
+function renderLeaderboard(elId){
+  const isAdmin=elId==='adminLeaderboard';
+  const thisMonth=new Date().getMonth();
+  const approved=allOps.filter(o=>o.status==='approved'&&o.month===thisMonth);
+  const summary={};
+  // فلترة حسب النوع للفنيين والمبيعات
+  let filtered=approved;
+  if(elId==='tLeaderboard') filtered=approved.filter(o=>o.type==='technician');
+  if(elId==='sLeaderboard') filtered=approved.filter(o=>o.type==='sales');
+  filtered.forEach(o=>{if(!summary[o.user])summary[o.user]={type:o.type,count:0};summary[o.user].count++;});
+  const limit=isAdmin?5:3;
+  const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count).slice(0,limit);
+  const el=document.getElementById(elId);
+  if(!el)return;
+  if(!sorted.length){el.innerHTML='<div class="empty"><div class="ei">🏆</div><p>مفيش بيانات لحد دلوقتي</p></div>';return;}
+  const ranks=['gold','silver','bronze','other','other'];
+  el.innerHTML=sorted.map(([name,d],i)=>`
+    <div class="leaderboard-item">
+      <div class="lb-rank ${ranks[i]}">${i+1}</div>
+      <div class="lb-info">
+        <div class="lb-name">${name}</div>
+        <div class="lb-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'}</div>
+      </div>
+      ${isAdmin?`<div class="lb-count">${d.count} عملية</div>`:''}
+    </div>`).join('');
+}
+
+function renderTechHome(){
+  const my=allOps.filter(o=>o.type==='technician'&&o.user===currentUser);
+  const approved=my.filter(o=>o.status==='approved'&&o.month===new Date().getMonth());
+  document.getElementById('tTotalOps').textContent=my.length;
+  document.getElementById('tApprovedOps').textContent=approved.length;
+  const el=document.getElementById('tRecentOps');
+  const recent=my.slice(-3).reverse();
+  el.innerHTML=recent.length?recent.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات لحد دلوقتي</p></div>';
+  renderLeaderboard('tLeaderboard');
+}
+
+function renderMyOps(){
+  const my=allOps.filter(o=>o.type==='technician'&&o.user===currentUser).reverse();
+  document.getElementById('tOpsList').innerHTML=my.length?my.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
+}
+
+function renderSalesHome(){
+  const my=allOps.filter(o=>o.type==='sales'&&o.user===currentUser);
+  const approved=my.filter(o=>o.status==='approved'&&o.month===new Date().getMonth());
+  document.getElementById('sTotalOps').textContent=my.length;
+  document.getElementById('sApprovedOps').textContent=approved.length;
+  const el=document.getElementById('sRecentOps');
+  const recent=my.slice(-3).reverse();
+  el.innerHTML=recent.length?recent.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات لحد دلوقتي</p></div>';
+  renderLeaderboard('sLeaderboard');
+}
+
+function renderSalesMyOps(){
+  const my=allOps.filter(o=>o.type==='sales'&&o.user===currentUser).reverse();
+  document.getElementById('sOpsList').innerHTML=my.length?my.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
+}
+
+function renderAdminHome(){
+  const pending=allOps.filter(o=>o.status==='pending');
+  const approved=allOps.filter(o=>o.status==='approved');
+  const rejected=allOps.filter(o=>o.status==='rejected');
+  document.getElementById('aPending').textContent=pending.length;
+  document.getElementById('aApproved').textContent=approved.length;
+  document.getElementById('aRejected').textContent=rejected.length;
+  document.getElementById('aTotal').textContent=allOps.length;
+  const el=document.getElementById('aPendingList');
+  el.innerHTML=pending.length?pending.slice().reverse().map(adminOpHTML).join(''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
+}
+
+function adminOpHTML(o){
+  const badge=o.status==='pending'?'<span class="badge b-pending">⏳ انتظار</span>':o.status==='approved'?'<span class="badge b-approved">✅ معتمد</span>':'<span class="badge b-rejected">❌ مرفوض</span>';
+  const main=o.type==='technician'
+    ?`🔧 ${o.user} | داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`
+    :`💼 ${o.user} | عميل: ${o.client}${o.distributor?' | موزع: '+o.distributor:''}${o.invoice?' | فاتورة: '+o.invoice:''}`;
+  const imgBtn=o.imgUrl?`<a href="${o.imgUrl}" target="_blank" class="btn-img">📷 صورة</a>`:'';
+  const actions=o.status==='pending'
+    ?`<div class="aop-actions">${imgBtn}<button class="btn-approve" onclick="updateStatus('${o.id}','approved')">✅ اعتماد</button><button class="btn-reject" onclick="updateStatus('${o.id}','rejected')">❌ رفض</button></div>`
+    :`<div class="aop-actions">${imgBtn}</div>`;
+  return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
+}
+
+function renderAllOps(filter){
+  ['all','technician','sales'].forEach(f=>{
+    document.getElementById(f==='all'?'fAll':f==='technician'?'fTech':'fSales').classList.toggle('active',f===filter);
+  });
+  let ops=filter==='all'?allOps:allOps.filter(o=>o.type===filter);
+  document.getElementById('aAllList').innerHTML=ops.slice().reverse().map(adminOpHTML).join('')||'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
+}
+
+function filterOps(f){renderAllOps(f);}
+
+function calcRewards(){
+  const tAmt=parseInt(document.getElementById('techAmt').value)||150;
+  const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
+  const thisMonth=new Date().getMonth();
+  const approved=allOps.filter(o=>o.status==='approved'&&o.month===thisMonth);
+  const summary={};
+  approved.forEach(o=>{if(!summary[o.user])summary[o.user]={type:o.type,count:0};summary[o.user].count++;});
+  const el=document.getElementById('rewardList');
+  const res=document.getElementById('rewardResult');
+  if(!Object.keys(summary).length){el.innerHTML='<div class="empty"><div class="ei">📊</div><p>مفيش عمليات معتمدة الشهر ده</p></div>';res.style.display='block';return;}
+  // ترتيب من الأعلى للأقل
+  const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count);
+  let html='',total=0;
+  sorted.forEach(([user,d])=>{
+    const amt=d.type==='technician'?tAmt:sAmt;const reward=d.count*amt;total+=reward;
+    html+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية × ${amt} ج</div></div><div class="reward-amt">${reward} ج</div></div>`;
+  });
+  html+=`<div class="reward-item" style="border-top:2px solid #e2e8f0;margin-top:8px;padding-top:14px"><div><div class="reward-name" style="color:var(--navy)">الإجمالي</div></div><div class="reward-amt" style="font-size:20px">${total} ج</div></div>`;
+  el.innerHTML=html;res.style.display='block';
+  renderLeaderboard('adminLeaderboard');
+}
+
+setInterval(()=>{if(currentRole==='admin')loadOps();},30000);
+</script>
+</body>
+</html>
