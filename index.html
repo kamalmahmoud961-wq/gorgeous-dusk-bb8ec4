@@ -8,7 +8,7 @@
 :root{--navy:#021D49;--blue:#2159B3;--cyan:#00FAF0;--red:#F45753;--gray:#f4f6fb;--muted:#6b7a99;--success:#16a34a;--warning:#d97706;--danger:#dc2626}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color:var(--navy);min-height:100vh;direction:rtl}
-.screen{display:none;min-height:100vh;flex-direction:column}#loginScreen{display:flex}
+.screen{display:none;min-height:100vh;flex-direction:column}
 .screen.active{display:flex}
 #loginScreen{background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);align-items:center;justify-content:center;padding:24px}
 .login-card{background:white;border-radius:24px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(2,29,73,0.35);animation:slideUp 0.4s ease}
@@ -162,6 +162,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
 </div>
 
+<!-- TECHNICIAN -->
+
 <!-- FORGOT PASSWORD -->
 <div id="forgotScreen" class="screen">
   <div style="background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);min-height:100vh;align-items:center;justify-content:center;padding:24px;display:flex">
@@ -186,7 +188,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
   </div>
 </div>
-<!-- TECHNICIAN -->
 <div id="techScreen" class="screen">
   <div class="topbar">
     <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" class="tb-logo" alt="Condor">
@@ -854,7 +855,6 @@ setInterval(()=>{if(currentRole==='admin')loadOps();},30000);
 </html>
 <script>
 let forgotUserId = null;
-
 function showForgotPassword(){
   hideAll();
   document.getElementById("forgotScreen").classList.add("active");
@@ -864,7 +864,6 @@ function showForgotPassword(){
   document.getElementById("fNatID").value="";
   forgotUserId=null;
 }
-
 async function verifyForgot(){
   const phone=document.getElementById("fPhone").value.trim();
   const natid=document.getElementById("fNatID").value.trim();
@@ -886,12 +885,9 @@ async function verifyForgot(){
     }else{
       showErr(errEl,"رقم التليفون أو البطاقة غلط");
     }
-  }catch(e){
-    showErr(errEl,"حصل خطأ، جرب تاني");
-  }
+  }catch(e){showErr(errEl,"حصل خطأ، جرب تاني");}
   btn.disabled=false;btn.textContent="تحقق";
 }
-
 async function resetPassword(){
   const newPass=document.getElementById("fNewPass").value.trim();
   const errEl=document.getElementById("forgotErr2");
@@ -901,18 +897,10 @@ async function resetPassword(){
   const btn=document.getElementById("resetBtn");
   btn.disabled=true;btn.textContent="جاري التغيير...";
   try{
-    const r=await fetch(API+"?sheet=users");
-    const rows=await r.json();
-    const users=rows.slice(1);
-    const userRow=users.findIndex(u=>String(u[0])===String(forgotUserId));
-    if(userRow>=0){
-      await fetch(API,{method:"POST",body:JSON.stringify({sheet:"resetPass",row:[forgotUserId,newPass]})});
-      alert("تم تغيير كلمة المرور بنجاح!");
-      showLogin();
-    }
-  }catch(e){
-    showErr(errEl,"حصل خطأ، جرب تاني");
-  }
+    await fetch(API,{method:"POST",mode:"no-cors",body:JSON.stringify({sheet:"resetPass",row:[forgotUserId,newPass]})});
+    alert("تم تغيير كلمة المرور بنجاح!");
+    showLogin();
+  }catch(e){showErr(errEl,"حصل خطأ، جرب تاني");}
   btn.disabled=false;btn.textContent="تغيير كلمة المرور";
 }
 </script>
