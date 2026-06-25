@@ -8,7 +8,7 @@
 :root{--navy:#021D49;--blue:#2159B3;--cyan:#00FAF0;--red:#F45753;--gray:#f4f6fb;--muted:#6b7a99;--success:#16a34a;--warning:#d97706;--danger:#dc2626}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color:var(--navy);min-height:100vh;direction:rtl}
-.screen{display:none;min-height:100vh;flex-direction:column}
+.screen{display:none;min-height:100vh;flex-direction:column}#loginScreen{display:flex}
 .screen.active{display:flex}
 #loginScreen{background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);align-items:center;justify-content:center;padding:24px}
 .login-card{background:white;border-radius:24px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(2,29,73,0.35);animation:slideUp 0.4s ease}
@@ -126,6 +126,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div id="loginErr" class="error-msg"></div>
     <button class="btn-main" onclick="doLogin()" id="loginBtn">دخول</button>
     <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">أول مرة؟ <span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="showRegister()">سجل حساب جديد</span></p>
+    <p style="text-align:center;margin-top:8px;font-size:12px;color:var(--muted)"><span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="showForgotPassword()">نسيت كلمة المرور؟</span></p>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center">
       <p style="font-size:11px;color:var(--muted);margin-bottom:4px">في مشكلة؟ تواصل معنا</p>
       <a href="tel:01060005373" style="font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;direction:ltr;display:inline-block">📞 01060005373</a>
@@ -161,6 +162,30 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
 </div>
 
+<!-- FORGOT PASSWORD -->
+<div id="forgotScreen" class="screen">
+  <div style="background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);min-height:100vh;align-items:center;justify-content:center;padding:24px;display:flex">
+  <div class="login-card">
+    <div class="logo-wrap">
+      <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" alt="Condor" style="width:140px">
+      <p class="logo-sub">استعادة كلمة المرور</p>
+    </div>
+    <div class="accent-line"></div>
+    <div id="forgotStep1">
+      <div class="inp-g"><label>رقم التليفون</label><input type="tel" id="fPhone" placeholder="01xxxxxxxxx"></div>
+      <div class="inp-g"><label>رقم البطاقة</label><input type="number" id="fNatID" placeholder="رقم البطاقة" inputmode="numeric"></div>
+      <div id="forgotErr" class="error-msg"></div>
+      <button class="btn-main" onclick="verifyForgot()" id="forgotBtn">تحقق</button>
+    </div>
+    <div id="forgotStep2" style="display:none">
+      <div class="inp-g"><label>كلمة المرور الجديدة</label><input type="password" id="fNewPass" placeholder="كلمة مرور جديدة"></div>
+      <div id="forgotErr2" class="error-msg"></div>
+      <button class="btn-main" onclick="resetPassword()" id="resetBtn">تغيير كلمة المرور</button>
+    </div>
+    <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)"><span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="showLogin()">رجوع لتسجيل الدخول</span></p>
+  </div>
+  </div>
+</div>
 <!-- TECHNICIAN -->
 <div id="techScreen" class="screen">
   <div class="topbar">
@@ -827,3 +852,67 @@ setInterval(()=>{if(currentRole==='admin')loadOps();},30000);
 </script>
 </body>
 </html>
+<script>
+let forgotUserId = null;
+
+function showForgotPassword(){
+  hideAll();
+  document.getElementById("forgotScreen").classList.add("active");
+  document.getElementById("forgotStep1").style.display="block";
+  document.getElementById("forgotStep2").style.display="none";
+  document.getElementById("fPhone").value="";
+  document.getElementById("fNatID").value="";
+  forgotUserId=null;
+}
+
+async function verifyForgot(){
+  const phone=document.getElementById("fPhone").value.trim();
+  const natid=document.getElementById("fNatID").value.trim();
+  const errEl=document.getElementById("forgotErr");
+  errEl.style.display="none";
+  if(!phone){showErr(errEl,"اكتب رقم التليفون");return;}
+  if(!natid){showErr(errEl,"اكتب رقم البطاقة");return;}
+  const btn=document.getElementById("forgotBtn");
+  btn.disabled=true;btn.textContent="جاري التحقق...";
+  try{
+    const r=await fetch(API+"?sheet=users");
+    const rows=await r.json();
+    const users=rows.slice(1);
+    const user=users.find(u=>(String(u[3])===phone||String(u[3])==="0"+phone)&&(String(u[4])===natid));
+    if(user){
+      forgotUserId=user[0];
+      document.getElementById("forgotStep1").style.display="none";
+      document.getElementById("forgotStep2").style.display="block";
+    }else{
+      showErr(errEl,"رقم التليفون أو البطاقة غلط");
+    }
+  }catch(e){
+    showErr(errEl,"حصل خطأ، جرب تاني");
+  }
+  btn.disabled=false;btn.textContent="تحقق";
+}
+
+async function resetPassword(){
+  const newPass=document.getElementById("fNewPass").value.trim();
+  const errEl=document.getElementById("forgotErr2");
+  errEl.style.display="none";
+  if(!newPass){showErr(errEl,"اكتب كلمة المرور الجديدة");return;}
+  if(newPass.length<6){showErr(errEl,"كلمة المرور لازم تكون 6 أحرف على الأقل");return;}
+  const btn=document.getElementById("resetBtn");
+  btn.disabled=true;btn.textContent="جاري التغيير...";
+  try{
+    const r=await fetch(API+"?sheet=users");
+    const rows=await r.json();
+    const users=rows.slice(1);
+    const userRow=users.findIndex(u=>String(u[0])===String(forgotUserId));
+    if(userRow>=0){
+      await fetch(API,{method:"POST",body:JSON.stringify({sheet:"resetPass",row:[forgotUserId,newPass]})});
+      alert("تم تغيير كلمة المرور بنجاح!");
+      showLogin();
+    }
+  }catch(e){
+    showErr(errEl,"حصل خطأ، جرب تاني");
+  }
+  btn.disabled=false;btn.textContent="تغيير كلمة المرور";
+}
+</script>
