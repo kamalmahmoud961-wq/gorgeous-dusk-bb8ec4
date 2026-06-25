@@ -130,7 +130,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center">
       <p style="font-size:11px;color:var(--muted);margin-bottom:4px">في مشكلة؟ تواصل معنا</p>
       <a href="tel:01060005373" style="font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;direction:ltr;display:inline-block">📞 01060005373</a>
-      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.1</p>
+      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.2</p>
     </div>
   </div>
 </div>
@@ -162,8 +162,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
 </div>
 
-<!-- TECHNICIAN -->
-
 <!-- FORGOT PASSWORD -->
 <div id="forgotScreen" class="screen">
   <div style="background:linear-gradient(160deg,var(--navy) 0%,#0d3080 60%,var(--blue) 100%);min-height:100vh;align-items:center;justify-content:center;padding:24px;display:flex">
@@ -188,6 +186,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
   </div>
 </div>
+
+<!-- TECHNICIAN -->
 <div id="techScreen" class="screen">
   <div class="topbar">
     <img src="https://i.postimg.cc/k5NK1qgp/IMG-6634.jpg" class="tb-logo" alt="Condor">
@@ -328,74 +328,39 @@ const UPLOAD_PRESET='ml_default';
 const ADMIN_USER='Mahmoudkamal';
 const ADMIN_PASS='1Asdfghjkl1@';
 
-let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[];
+let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null;
 
-// ======= LOCAL STORAGE للمستخدمين =======
-function getLocalUsers(){
-  try{return JSON.parse(localStorage.getItem('condor_users')||'[]');}catch(e){return[];}
-}
-function saveLocalUser(u){
-  const users=getLocalUsers();
-  users.push(u);
-  localStorage.setItem('condor_users',JSON.stringify(users));
-}
-function findLocalUser(identifier,pass){
-  const users=getLocalUsers();
-  return users.find(u=>(u.phone===identifier||u.natid===identifier)&&u.pass===pass);
-}
+function getLocalUsers(){try{return JSON.parse(localStorage.getItem('condor_users')||'[]');}catch(e){return[];}}
+function saveLocalUser(u){const users=getLocalUsers();users.push(u);localStorage.setItem('condor_users',JSON.stringify(users));}
+function findLocalUser(identifier,pass){const users=getLocalUsers();return users.find(u=>(u.phone===identifier||u.natid===identifier)&&u.pass===pass);}
+function getLocalOps(){try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}}
+function saveLocalOp(op){const ops=getLocalOps();ops.push(op);localStorage.setItem('condor_ops',JSON.stringify(ops));}
 
-// ======= LOCAL STORAGE للعمليات =======
-function getLocalOps(){
-  try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}
-}
-function saveLocalOp(op){
-  const ops=getLocalOps();
-  ops.push(op);
-  localStorage.setItem('condor_ops',JSON.stringify(ops));
-}
-
-async function postToAPI(data){
-  try{
-    await fetch(API,{method:'POST',body:JSON.stringify(data),mode:'no-cors',headers:{'Content-Type':'application/json'}});
-  }catch(e){console.log('API post error:',e);}
-}
+async function postToAPI(data){try{await fetch(API,{method:'POST',body:JSON.stringify(data),mode:'no-cors',headers:{'Content-Type':'application/json'}});}catch(e){console.log('API post error:',e);}}
 
 async function uploadToCloudinary(file){
-  const fd=new FormData();
-  fd.append('file',file);
-  fd.append('upload_preset',UPLOAD_PRESET);
+  const fd=new FormData();fd.append('file',file);fd.append('upload_preset',UPLOAD_PRESET);
   const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,{method:'POST',body:fd});
-  const data=await r.json();
-  return data.secure_url;
+  const data=await r.json();return data.secure_url;
 }
 
 function previewImg(input,prevId,uploadingId){
-  if(input.files&&input.files[0]){
-    const r=new FileReader();
-    r.onload=e=>{
-      document.getElementById(prevId).src=e.target.result;
-      document.getElementById(prevId).style.display='block';
-    };
-    r.readAsDataURL(input.files[0]);
-  }
+  if(input.files&&input.files[0]){const r=new FileReader();r.onload=e=>{document.getElementById(prevId).src=e.target.result;document.getElementById(prevId).style.display='block';};r.readAsDataURL(input.files[0]);}
 }
 
-function selectRole(r){
-  selectedRole=r;
-  document.querySelectorAll('#loginScreen .role-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById(r==='technician'?'roleT':'roleS').classList.add('selected');
-}
-
-function selectRegRole(r){
-  regRole=r;
-  document.querySelectorAll('#registerScreen .role-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById(r==='technician'?'regRoleT':'regRoleS').classList.add('selected');
-}
-
+function selectRole(r){selectedRole=r;document.querySelectorAll('#loginScreen .role-btn').forEach(b=>b.classList.remove('selected'));document.getElementById(r==='technician'?'roleT':'roleS').classList.add('selected');}
+function selectRegRole(r){regRole=r;document.querySelectorAll('#registerScreen .role-btn').forEach(b=>b.classList.remove('selected'));document.getElementById(r==='technician'?'regRoleT':'regRoleS').classList.add('selected');}
 function showErr(el,msg){el.textContent=msg;el.style.display='block';}
 function hideAll(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));}
 function showLogin(){hideAll();document.getElementById('loginScreen').classList.add('active');}
 function showRegister(){hideAll();document.getElementById('registerScreen').classList.add('active');}
+function showForgotPassword(){
+  hideAll();document.getElementById('forgotScreen').classList.add('active');
+  document.getElementById('forgotStep1').style.display='block';
+  document.getElementById('forgotStep2').style.display='none';
+  document.getElementById('fPhone').value='';document.getElementById('fNatID').value='';
+  forgotUserId=null;
+}
 
 async function doRegister(){
   const name=document.getElementById('rName').value.trim();
@@ -404,9 +369,7 @@ async function doRegister(){
   const wallet=document.getElementById('rWallet').value.trim();
   const company=document.getElementById('rCompany').value.trim();
   const pass=document.getElementById('rPass').value.trim();
-  const errEl=document.getElementById('regErr');
-  errEl.style.display='none';
-
+  const errEl=document.getElementById('regErr');errEl.style.display='none';
   if(!regRole){showErr(errEl,'اختار نوع حسابك');return;}
   if(!name){showErr(errEl,'اكتب اسمك');return;}
   if(!phone){showErr(errEl,'اكتب رقم تليفونك');return;}
@@ -414,104 +377,86 @@ async function doRegister(){
   if(!wallet){showErr(errEl,'اكتب رقم المحفظة');return;}
   if(!company){showErr(errEl,'اكتب اسم الشركة');return;}
   if(!pass){showErr(errEl,'اكتب كلمة المرور');return;}
-
-  // تحقق من عدم تكرار رقم التليفون أو البطاقة
   const existing=getLocalUsers();
   if(existing.find(u=>u.phone===phone)){showErr(errEl,'رقم التليفون مسجل من قبل');return;}
   if(existing.find(u=>u.natid===natid)){showErr(errEl,'رقم البطاقة مسجل من قبل');return;}
-
-  const btn=document.getElementById('regBtn');
-  btn.disabled=true;btn.textContent='جاري التسجيل...';
-
+  const btn=document.getElementById('regBtn');btn.disabled=true;btn.textContent='جاري التسجيل...';
   const id=Date.now();
   const userData={id,type:regRole,name,phone,natid,wallet,company,pass,date:new Date().toLocaleDateString('ar-EG')};
-
-  // حفظ محلي أولاً
   saveLocalUser(userData);
-
-  // إرسال للسيرفر
-  const row=[id,regRole,name,phone,natid,wallet,company,pass,new Date().toLocaleDateString('ar-EG')];
-  await postToAPI({sheet:'users',row});
-
+  await postToAPI({sheet:'users',row:[id,regRole,name,phone,natid,wallet,company,pass,new Date().toLocaleDateString('ar-EG')]});
   alert('✅ تم التسجيل بنجاح! سجل دخولك دلوقتي');
-  showLogin();
-  btn.disabled=false;btn.textContent='إنشاء الحساب';
+  showLogin();btn.disabled=false;btn.textContent='إنشاء الحساب';
 }
 
 async function doLogin(){
   const identifier=document.getElementById('lIdentifier').value.trim();
   const pass=document.getElementById('lPass').value.trim();
-  const errEl=document.getElementById('loginErr');
-  errEl.style.display='none';
-
-  if(identifier===ADMIN_USER&&pass===ADMIN_PASS){
-    currentUser=ADMIN_USER;currentRole='admin';
-    showAdminScreen();return;
-  }
-
+  const errEl=document.getElementById('loginErr');errEl.style.display='none';
+  if(identifier===ADMIN_USER&&pass===ADMIN_PASS){currentUser=ADMIN_USER;currentRole='admin';showAdminScreen();return;}
   if(!identifier){showErr(errEl,'اكتب رقم التليفون أو البطاقة');return;}
   if(!pass){showErr(errEl,'اكتب كلمة المرور');return;}
-
-  const btn=document.getElementById('loginBtn');
-  btn.disabled=true;btn.textContent='جاري الدخول...';
-
-  // أولاً: جرب Local Storage
+  const btn=document.getElementById('loginBtn');btn.disabled=true;btn.textContent='جاري الدخول...';
   const localUser=findLocalUser(identifier,pass);
   if(localUser){
     currentUserData={id:localUser.id,type:localUser.type,name:localUser.name,phone:localUser.phone,natid:localUser.natid,wallet:localUser.wallet,company:localUser.company};
     currentUser=localUser.name;currentRole=localUser.type;
     btn.disabled=false;btn.textContent='دخول';
-    if(currentRole==='technician')showTechScreen();
-    else showSalesScreen();
-    return;
+    if(currentRole==='technician')showTechScreen();else showSalesScreen();return;
   }
-
-  // ثانياً: جرب من السيرفر
   try{
-    const r=await fetch(API+'?sheet=users');
-    const rows=await r.json();
-    const users=rows.slice(1);
+    const r=await fetch(API+'?sheet=users');const rows=await r.json();const users=rows.slice(1);
     const user=users.find(u=>(u[3]===identifier||u[4]===identifier)&&u[7]===pass);
     if(user){
       currentUserData={id:user[0],type:user[1],name:user[2],phone:user[3],natid:user[4],wallet:user[5],company:user[6]};
       currentUser=user[2];currentRole=user[1];
-      // حفظ محلي للمرات الجاية
       saveLocalUser({id:user[0],type:user[1],name:user[2],phone:user[3],natid:user[4],wallet:user[5],company:user[6],pass:pass});
       btn.disabled=false;btn.textContent='دخول';
-      if(currentRole==='technician')showTechScreen();
-      else showSalesScreen();
-    }else{
-      showErr(errEl,'رقم التليفون أو البطاقة أو كلمة المرور غلط');
-      btn.disabled=false;btn.textContent='دخول';
-    }
-  }catch(e){
-    showErr(errEl,'حصل خطأ في الاتصال، جرب تاني');
-    btn.disabled=false;btn.textContent='دخول';
-  }
+      if(currentRole==='technician')showTechScreen();else showSalesScreen();
+    }else{showErr(errEl,'رقم التليفون أو البطاقة أو كلمة المرور غلط');btn.disabled=false;btn.textContent='دخول';}
+  }catch(e){showErr(errEl,'حصل خطأ في الاتصال، جرب تاني');btn.disabled=false;btn.textContent='دخول';}
 }
 
-function showTechScreen(){
-  hideAll();
-  document.getElementById('techUserName').textContent=currentUser;
-  document.getElementById('techScreen').classList.add('active');
-  techTab('Home');loadOps();
+async function verifyForgot(){
+  const phone=document.getElementById('fPhone').value.trim();
+  const natid=document.getElementById('fNatID').value.trim();
+  const errEl=document.getElementById('forgotErr');errEl.style.display='none';
+  if(!phone){showErr(errEl,'اكتب رقم التليفون');return;}
+  if(!natid){showErr(errEl,'اكتب رقم البطاقة');return;}
+  const btn=document.getElementById('forgotBtn');btn.disabled=true;btn.textContent='جاري التحقق...';
+  try{
+    const r=await fetch(API+'?sheet=users');const rows=await r.json();const users=rows.slice(1);
+    const user=users.find(u=>(String(u[3])===phone||String(u[3])==='0'+phone)&&String(u[4])===natid);
+    if(user){
+      forgotUserId=user[0];
+      document.getElementById('forgotStep1').style.display='none';
+      document.getElementById('forgotStep2').style.display='block';
+    }else{showErr(errEl,'رقم التليفون أو البطاقة غلط');}
+  }catch(e){showErr(errEl,'حصل خطأ، جرب تاني');}
+  btn.disabled=false;btn.textContent='تحقق';
 }
 
-function showSalesScreen(){
-  hideAll();
-  document.getElementById('salesUserName').textContent=currentUser;
-  document.getElementById('salesScreen').classList.add('active');
-  salesTab('Home');loadOps();
+async function resetPassword(){
+  const newPass=document.getElementById('fNewPass').value.trim();
+  const errEl=document.getElementById('forgotErr2');errEl.style.display='none';
+  if(!newPass){showErr(errEl,'اكتب كلمة المرور الجديدة');return;}
+  if(newPass.length<6){showErr(errEl,'كلمة المرور لازم تكون 6 أحرف على الأقل');return;}
+  const btn=document.getElementById('resetBtn');btn.disabled=true;btn.textContent='جاري التغيير...';
+  try{
+    await postToAPI({sheet:'resetPass',row:[forgotUserId,newPass]});
+    alert('تم تغيير كلمة المرور بنجاح!');showLogin();
+  }catch(e){showErr(errEl,'حصل خطأ، جرب تاني');}
+  btn.disabled=false;btn.textContent='تغيير كلمة المرور';
 }
 
+function showTechScreen(){hideAll();document.getElementById('techUserName').textContent=currentUser;document.getElementById('techScreen').classList.add('active');techTab('Home');loadOps();}
+function showSalesScreen(){hideAll();document.getElementById('salesUserName').textContent=currentUser;document.getElementById('salesScreen').classList.add('active');salesTab('Home');loadOps();}
 function showAdminScreen(){
-  hideAll();
-  document.getElementById('adminScreen').classList.add('active');
+  hideAll();document.getElementById('adminScreen').classList.add('active');
   const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   document.getElementById('curMonth').textContent=months[new Date().getMonth()]+' '+new Date().getFullYear();
   adminTab('Home');loadOps();
 }
-
 function logout(){
   currentUser=null;currentRole=null;currentUserData=null;selectedRole=null;regRole=null;allOps=[];
   hideAll();document.getElementById('loginScreen').classList.add('active');
@@ -519,213 +464,89 @@ function logout(){
 }
 
 function techTab(tab){
-  ['Home','NewOp','MyOps'].forEach(t=>{
-    document.getElementById('tech'+t).style.display=t===tab?'block':'none';
-    document.getElementById('tNav'+t).classList.toggle('active',t===tab);
-  });
-  if(tab==='Home')renderTechHome();
-  if(tab==='MyOps')renderMyOps();
+  ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('tech'+t).style.display=t===tab?'block':'none';document.getElementById('tNav'+t).classList.toggle('active',t===tab);});
+  if(tab==='Home')renderTechHome();if(tab==='MyOps')renderMyOps();
 }
-
 function salesTab(tab){
-  ['Home','NewOp','MyOps'].forEach(t=>{
-    document.getElementById('sales'+t).style.display=t===tab?'block':'none';
-    document.getElementById('sNav'+t).classList.toggle('active',t===tab);
-  });
-  if(tab==='Home')renderSalesHome();
-  if(tab==='MyOps')renderSalesMyOps();
+  ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('sales'+t).style.display=t===tab?'block':'none';document.getElementById('sNav'+t).classList.toggle('active',t===tab);});
+  if(tab==='Home')renderSalesHome();if(tab==='MyOps')renderSalesMyOps();
 }
-
 function adminTab(tab){
-  ['Home','AllOps','Rewards'].forEach(t=>{
-    document.getElementById('admin'+t).style.display=t===tab?'block':'none';
-    document.getElementById('aNav'+t).classList.toggle('active',t===tab);
-  });
-  if(tab==='Home')renderAdminHome();
-  if(tab==='AllOps')renderAllOps('all');
-  if(tab==='Rewards'){calcRewards();renderLeaderboard('adminLeaderboard');}
+  ['Home','AllOps','Rewards'].forEach(t=>{document.getElementById('admin'+t).style.display=t===tab?'block':'none';document.getElementById('aNav'+t).classList.toggle('active',t===tab);});
+  if(tab==='Home')renderAdminHome();if(tab==='AllOps')renderAllOps('all');if(tab==='Rewards'){calcRewards();renderLeaderboard('adminLeaderboard');}
 }
 
 async function loadOps(){
-  // دمج العمليات المحلية مع السيرفر
   const localOps=getLocalOps();
   try{
-    const r=await fetch(API+'?sheet=operations');
-    const rows=await r.json();
-    const serverOps=rows.slice(1).map(r=>({
-      id:String(r[0]),type:r[1],user:r[2],phone:r[3],
-      serialIn:r[4],serialOut:r[5],client:r[6],distributor:r[13]||'',invoice:r[14]||'',
-      imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10])
-    }));
-    // دمج بدون تكرار
+    const r=await fetch(API+'?sheet=operations');const rows=await r.json();
+    const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10])}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
     allOps=[...serverOps,...onlyLocal];
-  }catch(e){
-    allOps=localOps;
-  }
-  if(currentRole==='technician')renderTechHome();
-  else if(currentRole==='sales')renderSalesHome();
-  else renderAdminHome();
+  }catch(e){allOps=localOps;}
+  if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();
 }
 
 async function submitTechOp(){
   const sin=document.getElementById('tSerialIn').value.trim();
   const sout=document.getElementById('tSerialOut').value.trim();
   const imgInput=document.getElementById('tImg');
-  const errEl=document.getElementById('tErrMsg');
-  errEl.style.display='none';
-
+  const errEl=document.getElementById('tErrMsg');errEl.style.display='none';
   if(!sin){showErr(errEl,'ادخل سيريال الوحدة الداخلية');return;}
   if(!sout){showErr(errEl,'ادخل سيريال الوحدة الخارجية');return;}
   if(!imgInput.files[0]){showErr(errEl,'ارفع صورة شهادة الضمان');return;}
-
   const btn=document.getElementById('tSubmitBtn');
-
   try{
-    // منع تكرار السيريال
     const dupIn=allOps.find(o=>o.serialIn&&String(o.serialIn).toLowerCase()===sin.toLowerCase());
     if(dupIn){showErr(errEl,'سيريال الوحدة الداخلية مسجل من قبل!');return;}
     const dupOut=allOps.find(o=>o.serialOut&&String(o.serialOut).toLowerCase()===sout.toLowerCase());
     if(dupOut){showErr(errEl,'سيريال الوحدة الخارجية مسجل من قبل!');return;}
-
-    btn.disabled=true;btn.textContent='جاري الرفع...';
-    document.getElementById('tUploading').style.display='block';
-
+    btn.disabled=true;btn.textContent='جاري الرفع...';document.getElementById('tUploading').style.display='block';
     let imgUrl='';
-    try{
-      imgUrl=await uploadToCloudinary(imgInput.files[0]);
-    }catch(e){
-      document.getElementById('tUploading').style.display='none';
-      showErr(errEl,'فشل رفع الصورة، جرب تاني');
-      btn.disabled=false;btn.textContent='تسجيل التركيب';
-      return;
-    }
-
-    const op={
-      id:String(Date.now()),type:'technician',user:currentUser,
-      phone:currentUserData?.phone||'',
-      serialIn:sin,serialOut:sout,client:'',distributor:'',invoice:'',
-      imgUrl,status:'pending',
-      date:new Date().toLocaleDateString('ar-EG'),
-      month:new Date().getMonth()
-    };
-
-    // حفظ محلي أولاً
-    saveLocalOp(op);
-    allOps.push(op);
-
-    // إرسال للسيرفر (في الخلفية - مش بيوقف النجاح)
-    try{
-      const row=[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month];
-      await postToAPI({sheet:'operations',row});
-    }catch(e){console.log('Server sync failed, saved locally');}
-
-    document.getElementById('tSerialIn').value='';
-    document.getElementById('tSerialOut').value='';
-    document.getElementById('tImg').value='';
-    document.getElementById('tImgPrev').style.display='none';
-    document.getElementById('tUploading').style.display='none';
-    const msg=document.getElementById('tSuccessMsg');
-    msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
-    renderTechHome();
-    btn.disabled=false;btn.textContent='تسجيل التركيب';
-  }catch(e){
-    console.log('submitTechOp error:',e);
-    document.getElementById('tUploading').style.display='none';
-    showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');
-    btn.disabled=false;btn.textContent='تسجيل التركيب';
-  }
+    try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='تسجيل التركيب';return;}
+    const op={id:String(Date.now()),type:'technician',user:currentUser,phone:currentUserData?.phone||'',serialIn:sin,serialOut:sout,client:'',distributor:'',invoice:'',imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth()};
+    saveLocalOp(op);allOps.push(op);
+    try{await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month]});}catch(e){}
+    document.getElementById('tSerialIn').value='';document.getElementById('tSerialOut').value='';document.getElementById('tImg').value='';document.getElementById('tImgPrev').style.display='none';document.getElementById('tUploading').style.display='none';
+    const msg=document.getElementById('tSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    renderTechHome();btn.disabled=false;btn.textContent='تسجيل التركيب';
+  }catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');btn.disabled=false;btn.textContent='تسجيل التركيب';}
 }
-
 
 async function submitSalesOp(){
   const client=document.getElementById('sClient').value.trim();
   const distributor=document.getElementById('sDistributor').value.trim();
   const invoice=document.getElementById('sInvoice').value.trim();
   const imgInput=document.getElementById('sImg');
-  const errEl=document.getElementById('sErrMsg');
-  errEl.style.display='none';
-
+  const errEl=document.getElementById('sErrMsg');errEl.style.display='none';
   if(!client){showErr(errEl,'ادخل اسم العميل');return;}
   if(!distributor){showErr(errEl,'ادخل اسم الموزع');return;}
   if(!invoice){showErr(errEl,'ادخل رقم الفاتورة');return;}
   if(!imgInput.files[0]){showErr(errEl,'ارفع صورة الفاتورة');return;}
-
   const btn=document.getElementById('sSubmitBtn');
-
   try{
-    // منع تكرار رقم الفاتورة
     const dupInv=allOps.find(o=>o.invoice&&String(o.invoice)===invoice);
     if(dupInv){showErr(errEl,'رقم الفاتورة ده مسجل من قبل!');return;}
-
-    btn.disabled=true;btn.textContent='جاري الرفع...';
-    document.getElementById('sUploading').style.display='block';
-
+    btn.disabled=true;btn.textContent='جاري الرفع...';document.getElementById('sUploading').style.display='block';
     let imgUrl='';
-    try{
-      imgUrl=await uploadToCloudinary(imgInput.files[0]);
-    }catch(e){
-      document.getElementById('sUploading').style.display='none';
-      showErr(errEl,'فشل رفع الصورة، جرب تاني');
-      btn.disabled=false;btn.textContent='تسجيل البيع';
-      return;
-    }
-
-    const op={
-      id:String(Date.now()),type:'sales',user:currentUser,
-      phone:currentUserData?.phone||'',
-      serialIn:'',serialOut:'',client,distributor,invoice,
-      imgUrl,status:'pending',
-      date:new Date().toLocaleDateString('ar-EG'),
-      month:new Date().getMonth()
-    };
-
-    // حفظ محلي أولاً
-    saveLocalOp(op);
-    allOps.push(op);
-
-    // إرسال للسيرفر (في الخلفية)
-    try{
-      const row=[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',distributor,invoice];
-      await postToAPI({sheet:'operations',row});
-    }catch(e){console.log('Server sync failed, saved locally');}
-
-    document.getElementById('sClient').value='';
-    document.getElementById('sDistributor').value='';
-    document.getElementById('sInvoice').value='';
-    document.getElementById('sImg').value='';
-    document.getElementById('sImgPrev').style.display='none';
-    document.getElementById('sUploading').style.display='none';
-    const msg=document.getElementById('sSuccessMsg');
-    msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
-    renderSalesHome();
-    btn.disabled=false;btn.textContent='تسجيل البيع';
-  }catch(e){
-    console.log('submitSalesOp error:',e);
-    document.getElementById('sUploading').style.display='none';
-    showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');
-    btn.disabled=false;btn.textContent='تسجيل البيع';
-  }
+    try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('sUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='تسجيل البيع';return;}
+    const op={id:String(Date.now()),type:'sales',user:currentUser,phone:currentUserData?.phone||'',serialIn:'',serialOut:'',client,distributor,invoice,imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth()};
+    saveLocalOp(op);allOps.push(op);
+    try{await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',distributor,invoice]});}catch(e){}
+    document.getElementById('sClient').value='';document.getElementById('sDistributor').value='';document.getElementById('sInvoice').value='';document.getElementById('sImg').value='';document.getElementById('sImgPrev').style.display='none';document.getElementById('sUploading').style.display='none';
+    const msg=document.getElementById('sSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    renderSalesHome();btn.disabled=false;btn.textContent='تسجيل البيع';
+  }catch(e){document.getElementById('sUploading').style.display='none';showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');btn.disabled=false;btn.textContent='تسجيل البيع';}
 }
 
 async function updateStatus(id,status){
-  const op=allOps.find(o=>String(o.id)===String(id));
-  if(!op)return;
-  op.status=status;
-  // تحديث محلي دايماً
-  const localOps=getLocalOps();
-  const lo=localOps.find(o=>String(o.id)===String(id));
-  if(lo){lo.status=status;}
-  else{localOps.push({...op});}
+  const op=allOps.find(o=>String(o.id)===String(id));if(!op)return;op.status=status;
+  const localOps=getLocalOps();const lo=localOps.find(o=>String(o.id)===String(id));
+  if(lo){lo.status=status;}else{localOps.push({...op});}
   localStorage.setItem('condor_ops',JSON.stringify(localOps));
-  // إرسال للسيرفر في الخلفية
-  try{
-    await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});
-  }catch(e){console.log('Status sync failed, saved locally');}
-  // تحديث الشاشة دايماً
-  renderAdminHome();
-  renderAllOps('all');
+  try{await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});}catch(e){}
+  renderAdminHome();renderAllOps('all');
 }
 
 function opHTML(o){
@@ -735,172 +556,73 @@ function opHTML(o){
 }
 
 function renderLeaderboard(elId){
-  const isAdmin=elId==='adminLeaderboard';
-  const thisMonth=new Date().getMonth();
+  const isAdmin=elId==='adminLeaderboard';const thisMonth=new Date().getMonth();
   const approved=allOps.filter(o=>o.status==='approved'&&o.month===thisMonth);
-  const summary={};
-  // فلترة حسب النوع للفنيين والمبيعات
-  let filtered=approved;
-  if(elId==='tLeaderboard') filtered=approved.filter(o=>o.type==='technician');
-  if(elId==='sLeaderboard') filtered=approved.filter(o=>o.type==='sales');
+  const summary={};let filtered=approved;
+  if(elId==='tLeaderboard')filtered=approved.filter(o=>o.type==='technician');
+  if(elId==='sLeaderboard')filtered=approved.filter(o=>o.type==='sales');
   filtered.forEach(o=>{if(!summary[o.user])summary[o.user]={type:o.type,count:0};summary[o.user].count++;});
-  const limit=isAdmin?5:3;
-  const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count).slice(0,limit);
-  const el=document.getElementById(elId);
-  if(!el)return;
+  const limit=isAdmin?5:3;const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count).slice(0,limit);
+  const el=document.getElementById(elId);if(!el)return;
   if(!sorted.length){el.innerHTML='<div class="empty"><div class="ei">🏆</div><p>مفيش بيانات لحد دلوقتي</p></div>';return;}
   const ranks=['gold','silver','bronze','other','other'];
-  el.innerHTML=sorted.map(([name,d],i)=>`
-    <div class="leaderboard-item">
-      <div class="lb-rank ${ranks[i]}">${i+1}</div>
-      <div class="lb-info">
-        <div class="lb-name">${name}</div>
-        <div class="lb-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'}</div>
-      </div>
-      ${isAdmin?`<div class="lb-count">${d.count} عملية</div>`:''}
-    </div>`).join('');
+  el.innerHTML=sorted.map(([name,d],i)=>`<div class="leaderboard-item"><div class="lb-rank ${ranks[i]}">${i+1}</div><div class="lb-info"><div class="lb-name">${name}</div><div class="lb-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'}</div></div>${isAdmin?`<div class="lb-count">${d.count} عملية</div>`:''}</div>`).join('');
 }
 
 function renderTechHome(){
   const my=allOps.filter(o=>o.type==='technician'&&o.user===currentUser);
   const approved=my.filter(o=>o.status==='approved'&&o.month===new Date().getMonth());
-  document.getElementById('tTotalOps').textContent=my.length;
-  document.getElementById('tApprovedOps').textContent=approved.length;
-  const el=document.getElementById('tRecentOps');
+  document.getElementById('tTotalOps').textContent=my.length;document.getElementById('tApprovedOps').textContent=approved.length;
   const recent=my.slice(-3).reverse();
-  el.innerHTML=recent.length?recent.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات لحد دلوقتي</p></div>';
+  document.getElementById('tRecentOps').innerHTML=recent.length?recent.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات لحد دلوقتي</p></div>';
   renderLeaderboard('tLeaderboard');
 }
-
-function renderMyOps(){
-  const my=allOps.filter(o=>o.type==='technician'&&o.user===currentUser).reverse();
-  document.getElementById('tOpsList').innerHTML=my.length?my.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
-}
-
+function renderMyOps(){const my=allOps.filter(o=>o.type==='technician'&&o.user===currentUser).reverse();document.getElementById('tOpsList').innerHTML=my.length?my.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';}
 function renderSalesHome(){
   const my=allOps.filter(o=>o.type==='sales'&&o.user===currentUser);
   const approved=my.filter(o=>o.status==='approved'&&o.month===new Date().getMonth());
-  document.getElementById('sTotalOps').textContent=my.length;
-  document.getElementById('sApprovedOps').textContent=approved.length;
-  const el=document.getElementById('sRecentOps');
+  document.getElementById('sTotalOps').textContent=my.length;document.getElementById('sApprovedOps').textContent=approved.length;
   const recent=my.slice(-3).reverse();
-  el.innerHTML=recent.length?recent.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات لحد دلوقتي</p></div>';
+  document.getElementById('sRecentOps').innerHTML=recent.length?recent.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات لحد دلوقتي</p></div>';
   renderLeaderboard('sLeaderboard');
 }
-
-function renderSalesMyOps(){
-  const my=allOps.filter(o=>o.type==='sales'&&o.user===currentUser).reverse();
-  document.getElementById('sOpsList').innerHTML=my.length?my.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
-}
+function renderSalesMyOps(){const my=allOps.filter(o=>o.type==='sales'&&o.user===currentUser).reverse();document.getElementById('sOpsList').innerHTML=my.length?my.map(opHTML).join(''):'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';}
 
 function renderAdminHome(){
-  const pending=allOps.filter(o=>o.status==='pending');
-  const approved=allOps.filter(o=>o.status==='approved');
-  const rejected=allOps.filter(o=>o.status==='rejected');
-  document.getElementById('aPending').textContent=pending.length;
-  document.getElementById('aApproved').textContent=approved.length;
-  document.getElementById('aRejected').textContent=rejected.length;
-  document.getElementById('aTotal').textContent=allOps.length;
-  const el=document.getElementById('aPendingList');
-  el.innerHTML=pending.length?pending.slice().reverse().map(adminOpHTML).join(''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
+  const pending=allOps.filter(o=>o.status==='pending');const approved=allOps.filter(o=>o.status==='approved');const rejected=allOps.filter(o=>o.status==='rejected');
+  document.getElementById('aPending').textContent=pending.length;document.getElementById('aApproved').textContent=approved.length;document.getElementById('aRejected').textContent=rejected.length;document.getElementById('aTotal').textContent=allOps.length;
+  document.getElementById('aPendingList').innerHTML=pending.length?pending.slice().reverse().map(adminOpHTML).join(''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
 }
 
 function adminOpHTML(o){
   const badge=o.status==='pending'?'<span class="badge b-pending">⏳ انتظار</span>':o.status==='approved'?'<span class="badge b-approved">✅ معتمد</span>':'<span class="badge b-rejected">❌ مرفوض</span>';
-  const main=o.type==='technician'
-    ?`🔧 ${o.user} | داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`
-    :`💼 ${o.user} | عميل: ${o.client}${o.distributor?' | موزع: '+o.distributor:''}${o.invoice?' | فاتورة: '+o.invoice:''}`;
+  const main=o.type==='technician'?`🔧 ${o.user} | داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`:`💼 ${o.user} | عميل: ${o.client}${o.distributor?' | موزع: '+o.distributor:''}${o.invoice?' | فاتورة: '+o.invoice:''}`;
   const imgBtn=o.imgUrl?`<a href="${o.imgUrl}" target="_blank" class="btn-img">📷 صورة</a>`:'';
-  const actions=o.status==='pending'
-    ?`<div class="aop-actions">${imgBtn}<button class="btn-approve" onclick="updateStatus('${o.id}','approved')">✅ اعتماد</button><button class="btn-reject" onclick="updateStatus('${o.id}','rejected')">❌ رفض</button></div>`
-    :`<div class="aop-actions">${imgBtn}</div>`;
+  const actions=o.status==='pending'?`<div class="aop-actions">${imgBtn}<button class="btn-approve" onclick="updateStatus('${o.id}','approved')">✅ اعتماد</button><button class="btn-reject" onclick="updateStatus('${o.id}','rejected')">❌ رفض</button></div>`:`<div class="aop-actions">${imgBtn}</div>`;
   return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
 }
 
 function renderAllOps(filter){
-  ['all','technician','sales'].forEach(f=>{
-    document.getElementById(f==='all'?'fAll':f==='technician'?'fTech':'fSales').classList.toggle('active',f===filter);
-  });
+  ['all','technician','sales'].forEach(f=>{document.getElementById(f==='all'?'fAll':f==='technician'?'fTech':'fSales').classList.toggle('active',f===filter);});
   let ops=filter==='all'?allOps:allOps.filter(o=>o.type===filter);
   document.getElementById('aAllList').innerHTML=ops.slice().reverse().map(adminOpHTML).join('')||'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
 }
-
 function filterOps(f){renderAllOps(f);}
 
 function calcRewards(){
-  const tAmt=parseInt(document.getElementById('techAmt').value)||150;
-  const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
-  const thisMonth=new Date().getMonth();
-  const approved=allOps.filter(o=>o.status==='approved'&&o.month===thisMonth);
-  const summary={};
-  approved.forEach(o=>{if(!summary[o.user])summary[o.user]={type:o.type,count:0};summary[o.user].count++;});
-  const el=document.getElementById('rewardList');
-  const res=document.getElementById('rewardResult');
+  const tAmt=parseInt(document.getElementById('techAmt').value)||150;const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
+  const thisMonth=new Date().getMonth();const approved=allOps.filter(o=>o.status==='approved'&&o.month===thisMonth);
+  const summary={};approved.forEach(o=>{if(!summary[o.user])summary[o.user]={type:o.type,count:0};summary[o.user].count++;});
+  const el=document.getElementById('rewardList');const res=document.getElementById('rewardResult');
   if(!Object.keys(summary).length){el.innerHTML='<div class="empty"><div class="ei">📊</div><p>مفيش عمليات معتمدة الشهر ده</p></div>';res.style.display='block';return;}
-  // ترتيب من الأعلى للأقل
   const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count);
   let html='',total=0;
-  sorted.forEach(([user,d])=>{
-    const amt=d.type==='technician'?tAmt:sAmt;const reward=d.count*amt;total+=reward;
-    html+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية × ${amt} ج</div></div><div class="reward-amt">${reward} ج</div></div>`;
-  });
+  sorted.forEach(([user,d])=>{const amt=d.type==='technician'?tAmt:sAmt;const reward=d.count*amt;total+=reward;html+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية × ${amt} ج</div></div><div class="reward-amt">${reward} ج</div></div>`;});
   html+=`<div class="reward-item" style="border-top:2px solid #e2e8f0;margin-top:8px;padding-top:14px"><div><div class="reward-name" style="color:var(--navy)">الإجمالي</div></div><div class="reward-amt" style="font-size:20px">${total} ج</div></div>`;
-  el.innerHTML=html;res.style.display='block';
-  renderLeaderboard('adminLeaderboard');
+  el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
 }
 
 setInterval(()=>{if(currentRole==='admin')loadOps();},30000);
 </script>
 </body>
 </html>
-<script>
-let forgotUserId = null;
-function showForgotPassword(){
-  hideAll();
-  document.getElementById("forgotScreen").classList.add("active");
-  document.getElementById("forgotStep1").style.display="block";
-  document.getElementById("forgotStep2").style.display="none";
-  document.getElementById("fPhone").value="";
-  document.getElementById("fNatID").value="";
-  forgotUserId=null;
-}
-async function verifyForgot(){
-  const phone=document.getElementById("fPhone").value.trim();
-  const natid=document.getElementById("fNatID").value.trim();
-  const errEl=document.getElementById("forgotErr");
-  errEl.style.display="none";
-  if(!phone){showErr(errEl,"اكتب رقم التليفون");return;}
-  if(!natid){showErr(errEl,"اكتب رقم البطاقة");return;}
-  const btn=document.getElementById("forgotBtn");
-  btn.disabled=true;btn.textContent="جاري التحقق...";
-  try{
-    const r=await fetch(API+"?sheet=users");
-    const rows=await r.json();
-    const users=rows.slice(1);
-    const user=users.find(u=>(String(u[3])===phone||String(u[3])==="0"+phone)&&(String(u[4])===natid));
-    if(user){
-      forgotUserId=user[0];
-      document.getElementById("forgotStep1").style.display="none";
-      document.getElementById("forgotStep2").style.display="block";
-    }else{
-      showErr(errEl,"رقم التليفون أو البطاقة غلط");
-    }
-  }catch(e){showErr(errEl,"حصل خطأ، جرب تاني");}
-  btn.disabled=false;btn.textContent="تحقق";
-}
-async function resetPassword(){
-  const newPass=document.getElementById("fNewPass").value.trim();
-  const errEl=document.getElementById("forgotErr2");
-  errEl.style.display="none";
-  if(!newPass){showErr(errEl,"اكتب كلمة المرور الجديدة");return;}
-  if(newPass.length<6){showErr(errEl,"كلمة المرور لازم تكون 6 أحرف على الأقل");return;}
-  const btn=document.getElementById("resetBtn");
-  btn.disabled=true;btn.textContent="جاري التغيير...";
-  try{
-    await fetch(API,{method:"POST",mode:"no-cors",body:JSON.stringify({sheet:"resetPass",row:[forgotUserId,newPass]})});
-    alert("تم تغيير كلمة المرور بنجاح!");
-    showLogin();
-  }catch(e){showErr(errEl,"حصل خطأ، جرب تاني");}
-  btn.disabled=false;btn.textContent="تغيير كلمة المرور";
-}
-</script>
