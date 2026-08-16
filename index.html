@@ -60,17 +60,21 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
 .op-item.pending{border-right-color:var(--warning)}
 .op-item.approved{border-right-color:var(--success)}
 .op-item.rejected{border-right-color:var(--danger)}
+.op-item.unsynced{border-right-color:#94a3b8}
 .op-name{font-weight:700;font-size:14px}
 .op-meta{font-size:12px;color:var(--muted);margin-top:3px}
 .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
 .b-pending{background:#fef3c7;color:var(--warning)}
 .b-approved{background:#dcfce7;color:var(--success)}
 .b-rejected{background:#fee2e2;color:var(--danger)}
+.b-unsynced{background:#e2e8f0;color:#475569}
 .aop{background:white;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
 .aop-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
 .aop-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .btn-approve{flex:1;padding:10px;background:#dcfce7;color:var(--success);border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.btn-approve:disabled{opacity:0.5;cursor:not-allowed}
 .btn-reject{flex:1;padding:10px;background:#fee2e2;color:var(--danger);border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.btn-reject:disabled{opacity:0.5;cursor:not-allowed}
 .btn-img{padding:10px 14px;background:#eef4ff;color:var(--blue);border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
 .reward-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9}
 .reward-item:last-child{border-bottom:none}
@@ -86,6 +90,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
 .tab.active{background:white;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 .success-msg{background:#dcfce7;color:var(--success);padding:12px;border-radius:12px;font-weight:700;font-size:14px;text-align:center;margin-bottom:14px;display:none}
 .error-msg{background:#fee2e2;color:var(--danger);padding:12px;border-radius:12px;font-weight:700;font-size:14px;text-align:center;margin-bottom:14px;display:none}
+.warn-msg{background:#fef3c7;color:var(--warning);padding:12px;border-radius:12px;font-weight:700;font-size:14px;text-align:center;margin-bottom:14px;display:none}
 .loading{text-align:center;padding:30px;color:var(--muted)}
 .spinner{display:inline-block;width:30px;height:30px;border:3px solid #e2e8f0;border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -104,9 +109,12 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
 .lb-name{font-weight:700;font-size:14px}
 .lb-role{font-size:12px;color:var(--muted)}
 .lb-count{font-weight:900;font-size:16px;color:var(--blue)}
+.sync-banner{background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;padding:8px 14px;text-align:center;display:none}
 </style>
 </head>
 <body>
+
+<div id="syncBanner" class="sync-banner"></div>
 
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
@@ -130,7 +138,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center">
       <p style="font-size:11px;color:var(--muted);margin-bottom:4px">في مشكلة؟ تواصل معنا</p>
       <a href="tel:01060005373" style="font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;direction:ltr;display:inline-block">📞 01060005373</a>
-      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.3</p>
+      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.4</p>
     </div>
   </div>
 </div>
@@ -204,6 +212,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
   <div id="techNewOp" class="content" style="display:none">
     <div class="success-msg" id="tSuccessMsg">✅ تم رفع شهادة الضمان بنجاح!</div>
+    <div class="warn-msg" id="tWarnMsg">⚠️ العملية محفوظة على جهازك وهنحاول نبعتها تاني تلقائيًا لحد ما توصل</div>
     <div class="error-msg" id="tErrMsg"></div>
     <div class="card">
       <div class="card-title">🔧 تسجيل تركيب جديد</div>
@@ -249,6 +258,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
   </div>
   <div id="salesNewOp" class="content" style="display:none">
     <div class="success-msg" id="sSuccessMsg">✅ تم تسجيل البيع بنجاح!</div>
+    <div class="warn-msg" id="sWarnMsg">⚠️ العملية محفوظة على جهازك وهنحاول نبعتها تاني تلقائيًا لحد ما توصل</div>
     <div class="error-msg" id="sErrMsg"></div>
     <div class="card">
       <div class="card-title">💼 تسجيل بيع جديد</div>
@@ -322,11 +332,19 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
 </div>
 
 <script>
+/* ============================================================================
+   ملاحظة أمان مهمة (تمت مراجعتها بعد بلاغ المستخدم بتاريخ 16 أغسطس 2026):
+   باسورد الأدمن هنا لسه مكتوب جوه كود الصفحة (client-side)، وأي حد يقدر يشوفه
+   لو فتح "View Page Source". اتغيّر النهارده كإجراء فوري لأن القديم كان متسرّب،
+   لكن ده مسكّن مؤقت مش حل جذري. الحل الجذري: نقل التحقق من اليوزر/الباسورد
+   لجوه Google Apps Script (السيرفر) بدل ما يفضل في المتصفح. لو عندك كود
+   الـApps Script، ابعتهولي عشان أعمل الخطوة دي.
+   ============================================================================ */
 const API='https://script.google.com/macros/s/AKfycbwcuAB7ureLdEpz8XSKfMLDxbwrxbrqZhC1QdLtBZgBaICZksSLq94kUvamvz5_GnRQ/exec';
 const CLOUD_NAME='dqkshie0p';
 const UPLOAD_PRESET='ml_default';
 const ADMIN_USER='Mahmoudkamal';
-const ADMIN_PASS='1Asdfghjkl1@';
+const ADMIN_PASS='Cnd_d69Wscx9h1QINm!9'; // تم تغييره 16 أغسطس 2026 - الباسورد القديم كان متسرّب في الكود العلني. غيّره تاني لو شاركته مع حد.
 
 let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null;
 
@@ -335,8 +353,26 @@ function saveLocalUser(u){const users=getLocalUsers();users.push(u);localStorage
 function findLocalUser(identifier,pass){const users=getLocalUsers();return users.find(u=>(String(u.phone)===String(identifier)||String(u.natid)===String(identifier))&&String(u.pass)===String(pass));}
 function getLocalOps(){try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}}
 function saveLocalOp(op){const ops=getLocalOps();ops.push(op);localStorage.setItem('condor_ops',JSON.stringify(ops));}
+function updateLocalOp(id,patch){const ops=getLocalOps();const o=ops.find(x=>String(x.id)===String(id));if(o){Object.assign(o,patch);localStorage.setItem('condor_ops',JSON.stringify(ops));}}
 
-async function postToAPI(data){try{await fetch(API,{method:'POST',body:JSON.stringify(data),mode:'no-cors',headers:{'Content-Type':'application/json'}});}catch(e){console.log('API post error:',e);}}
+/* ============================================================================
+   إصلاح 16 أغسطس 2026: قبل كده الدالة دي كانت بتستخدم mode:'no-cors' وبتبلع
+   أي خطأ في catch فاضي، فالموقع كان بيقول "تم بنجاح" حتى لو العملية فعلاً
+   ماوصلتش لجوجل شيت. دلوقتي: بنبعت من غير no-cors (باستخدام Content-Type:
+   text/plain عشان نتفادى مشكلة CORS preflight المعروفة مع Google Apps
+   Script)، وبنرجّع true/false حقيقي على حسب لو الطلب نجح فعلاً على مستوى
+   الشبكة، عشان الكود اللي بيستخدمها يقدر ياخد قرار صح (يعرض تحذير، يعيد
+   المحاولة، ...إلخ) بدل ما يفترض النجاح دايمًا.
+   ============================================================================ */
+async function postToAPI(data){
+  try{
+    const r=await fetch(API,{method:'POST',body:JSON.stringify(data),headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    return r.ok;
+  }catch(e){
+    console.log('API post error:',e);
+    return false;
+  }
+}
 
 async function uploadToCloudinary(file){
   const fd=new FormData();fd.append('file',file);fd.append('upload_preset',UPLOAD_PRESET);
@@ -384,8 +420,12 @@ async function doRegister(){
   const id=Date.now();
   const userData={id,type:regRole,name,phone,natid,wallet,company,pass,date:new Date().toLocaleDateString('ar-EG')};
   saveLocalUser(userData);
-  await postToAPI({sheet:'users',row:[id,regRole,name,phone,natid,wallet,company,pass,new Date().toLocaleDateString('ar-EG')]});
-  alert('✅ تم التسجيل بنجاح! سجل دخولك دلوقتي');
+  const ok=await postToAPI({sheet:'users',row:[id,regRole,name,phone,natid,wallet,company,pass,new Date().toLocaleDateString('ar-EG')]});
+  if(ok){
+    alert('✅ تم التسجيل بنجاح! سجل دخولك دلوقتي');
+  }else{
+    alert('⚠️ اتسجل حسابك على جهازك، بس حصلت مشكلة في الاتصال بالسيرفر. هنحاول نبعته تاني تلقائيًا أول ما النت يرجع، أو كلّم الدعم لو الموضوع طال.');
+  }
   showLogin();btn.disabled=false;btn.textContent='إنشاء الحساب';
 }
 
@@ -442,10 +482,9 @@ async function resetPassword(){
   if(!newPass){showErr(errEl,'اكتب كلمة المرور الجديدة');return;}
   if(newPass.length<6){showErr(errEl,'كلمة المرور لازم تكون 6 أحرف على الأقل');return;}
   const btn=document.getElementById('resetBtn');btn.disabled=true;btn.textContent='جاري التغيير...';
-  try{
-    await postToAPI({sheet:'resetPass',row:[forgotUserId,newPass]});
-    alert('تم تغيير كلمة المرور بنجاح!');showLogin();
-  }catch(e){showErr(errEl,'حصل خطأ، جرب تاني');}
+  const ok=await postToAPI({sheet:'resetPass',row:[forgotUserId,newPass]});
+  if(ok){alert('تم تغيير كلمة المرور بنجاح!');showLogin();}
+  else{showErr(errEl,'حصل خطأ في الاتصال، جرب تاني كمان شوية');}
   btn.disabled=false;btn.textContent='تغيير كلمة المرور';
 }
 
@@ -480,12 +519,40 @@ async function loadOps(){
   const localOps=getLocalOps();
   try{
     const r=await fetch(API+'?sheet=operations');const rows=await r.json();
-    const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10])}));
+    const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
     allOps=[...serverOps,...onlyLocal];
   }catch(e){allOps=localOps;}
   if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();
+  updateSyncBanner();
+}
+
+/* ============================================================================
+   إصلاح 16 أغسطس 2026: أي عملية اتسجلت محليًا وفشلت في الوصول للسيرفر
+   (synced:false) بنحاول نبعتها تاني هنا، عشان محدش يفقد عمليته لو حصل بطء
+   أو انقطاع نت وقت التسجيل. بتتنفذ عند فتح أي شاشة وكل 30 ثانية.
+   ============================================================================ */
+async function resyncPendingOps(){
+  const localOps=getLocalOps();
+  const unsynced=localOps.filter(o=>o.synced===false);
+  for(const op of unsynced){
+    const row=op.type==='technician'
+      ?[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month]
+      :[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',op.distributor,op.invoice];
+    const ok=await postToAPI({sheet:'operations',row});
+    if(ok){
+      updateLocalOp(op.id,{synced:true});
+      const memOp=allOps.find(o=>String(o.id)===String(op.id));if(memOp)memOp.synced=true;
+    }
+  }
+  updateSyncBanner();
+}
+function updateSyncBanner(){
+  const pending=getLocalOps().filter(o=>o.synced===false).length;
+  const el=document.getElementById('syncBanner');
+  if(pending>0){el.textContent=`🔄 في ${pending} عملية لسه بتتزامن مع السيرفر... متقفلش الصفحة`;el.style.display='block';}
+  else{el.style.display='none';}
 }
 
 async function submitTechOp(){
@@ -505,11 +572,17 @@ async function submitTechOp(){
     btn.disabled=true;btn.textContent='جاري الرفع...';document.getElementById('tUploading').style.display='block';
     let imgUrl='';
     try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='تسجيل التركيب';return;}
-    const op={id:String(Date.now()),type:'technician',user:currentUser,phone:currentUserData?.phone||'',serialIn:sin,serialOut:sout,client:'',distributor:'',invoice:'',imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth()};
+    const op={id:String(Date.now()),type:'technician',user:currentUser,phone:currentUserData?.phone||'',serialIn:sin,serialOut:sout,client:'',distributor:'',invoice:'',imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth(),synced:false};
     saveLocalOp(op);allOps.push(op);
-    try{await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month]});}catch(e){}
+    const ok=await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month]});
+    if(ok){updateLocalOp(op.id,{synced:true});op.synced=true;}
     document.getElementById('tSerialIn').value='';document.getElementById('tSerialOut').value='';document.getElementById('tImg').value='';document.getElementById('tImgPrev').style.display='none';document.getElementById('tUploading').style.display='none';
-    const msg=document.getElementById('tSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    if(ok){
+      const msg=document.getElementById('tSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    }else{
+      const wmsg=document.getElementById('tWarnMsg');wmsg.style.display='block';setTimeout(()=>wmsg.style.display='none',5000);
+    }
+    updateSyncBanner();
     renderTechHome();btn.disabled=false;btn.textContent='تسجيل التركيب';
   }catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');btn.disabled=false;btn.textContent='تسجيل التركيب';}
 }
@@ -531,28 +604,45 @@ async function submitSalesOp(){
     btn.disabled=true;btn.textContent='جاري الرفع...';document.getElementById('sUploading').style.display='block';
     let imgUrl='';
     try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('sUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='تسجيل البيع';return;}
-    const op={id:String(Date.now()),type:'sales',user:currentUser,phone:currentUserData?.phone||'',serialIn:'',serialOut:'',client,distributor,invoice,imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth()};
+    const op={id:String(Date.now()),type:'sales',user:currentUser,phone:currentUserData?.phone||'',serialIn:'',serialOut:'',client,distributor,invoice,imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth(),synced:false};
     saveLocalOp(op);allOps.push(op);
-    try{await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',distributor,invoice]});}catch(e){}
+    const ok=await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',distributor,invoice]});
+    if(ok){updateLocalOp(op.id,{synced:true});op.synced=true;}
     document.getElementById('sClient').value='';document.getElementById('sDistributor').value='';document.getElementById('sInvoice').value='';document.getElementById('sImg').value='';document.getElementById('sImgPrev').style.display='none';document.getElementById('sUploading').style.display='none';
-    const msg=document.getElementById('sSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    if(ok){
+      const msg=document.getElementById('sSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
+    }else{
+      const wmsg=document.getElementById('sWarnMsg');wmsg.style.display='block';setTimeout(()=>wmsg.style.display='none',5000);
+    }
+    updateSyncBanner();
     renderSalesHome();btn.disabled=false;btn.textContent='تسجيل البيع';
   }catch(e){document.getElementById('sUploading').style.display='none';showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');btn.disabled=false;btn.textContent='تسجيل البيع';}
 }
 
-async function updateStatus(id,status){
+/* ============================================================================
+   إصلاح 16 أغسطس 2026: بنعطّل زرارات الموافقة/الرفض فورًا لحد ما الطلب يخلص،
+   عشان الضغط المتكرر (double click) ما يبعتش نفس التحديث أكتر من مرة ويعمل
+   سجلات متضاربة (approved/rejected) لنفس العملية زي ما حصل قبل كده.
+   ============================================================================ */
+async function updateStatus(id,status,btnEl){
+  if(btnEl){
+    const row=btnEl.closest('.aop-actions');
+    if(row)row.querySelectorAll('button').forEach(b=>b.disabled=true);
+  }
   const op=allOps.find(o=>String(o.id)===String(id));if(!op)return;op.status=status;
   const localOps=getLocalOps();const lo=localOps.find(o=>String(o.id)===String(id));
   if(lo){lo.status=status;}else{localOps.push({...op});}
   localStorage.setItem('condor_ops',JSON.stringify(localOps));
-  try{await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});}catch(e){}
+  const ok=await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});
+  if(!ok){alert('⚠️ اتحفظ التحديث على جهازك بس فشل يوصل للسيرفر. جرب تاني لما النت يستقر.');}
   renderAdminHome();renderAllOps('all');
 }
 
 function opHTML(o){
   const badge=o.status==='pending'?'<span class="badge b-pending">⏳ انتظار</span>':o.status==='approved'?'<span class="badge b-approved">✅ معتمد</span>':'<span class="badge b-rejected">❌ مرفوض</span>';
+  const syncBadge=o.synced===false?'<span class="badge b-unsynced">🔄 بيتزامن</span>':'';
   const main=o.type==='technician'?`داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`:`عميل: ${o.client}${o.invoice?' | فاتورة: '+o.invoice:''}`;
-  return `<div class="op-item ${o.status}"><div><div class="op-name">${o.type==='technician'?'🔧':'💼'} ${o.user}</div><div class="op-meta">${main}</div><div class="op-meta">${o.date}</div></div>${badge}</div>`;
+  return `<div class="op-item ${o.synced===false?'unsynced':o.status}"><div><div class="op-name">${o.type==='technician'?'🔧':'💼'} ${o.user}</div><div class="op-meta">${main}</div><div class="op-meta">${o.date}</div></div>${syncBadge||badge}</div>`;
 }
 
 function renderLeaderboard(elId){
@@ -596,10 +686,11 @@ function renderAdminHome(){
 
 function adminOpHTML(o){
   const badge=o.status==='pending'?'<span class="badge b-pending">⏳ انتظار</span>':o.status==='approved'?'<span class="badge b-approved">✅ معتمد</span>':'<span class="badge b-rejected">❌ مرفوض</span>';
+  const syncBadge=o.synced===false?' <span class="badge b-unsynced">🔄 بيتزامن</span>':'';
   const main=o.type==='technician'?`🔧 ${o.user} | داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`:`💼 ${o.user} | عميل: ${o.client}${o.distributor?' | موزع: '+o.distributor:''}${o.invoice?' | فاتورة: '+o.invoice:''}`;
   const imgBtn=o.imgUrl?`<a href="${o.imgUrl}" target="_blank" class="btn-img">📷 صورة</a>`:'';
-  const actions=o.status==='pending'?`<div class="aop-actions">${imgBtn}<button class="btn-approve" onclick="updateStatus('${o.id}','approved')">✅ اعتماد</button><button class="btn-reject" onclick="updateStatus('${o.id}','rejected')">❌ رفض</button></div>`:`<div class="aop-actions">${imgBtn}</div>`;
-  return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
+  const actions=o.status==='pending'?`<div class="aop-actions">${imgBtn}<button class="btn-approve" onclick="updateStatus('${o.id}','approved',this)">✅ اعتماد</button><button class="btn-reject" onclick="updateStatus('${o.id}','rejected',this)">❌ رفض</button></div>`:`<div class="aop-actions">${imgBtn}</div>`;
+  return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}${syncBadge}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
 }
 
 function renderAllOps(filter){
@@ -622,7 +713,8 @@ function calcRewards(){
   el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
 }
 
-setInterval(()=>{if(currentRole==='admin')loadOps();},30000);
+setInterval(()=>{if(currentRole==='admin')loadOps();resyncPendingOps();},30000);
+resyncPendingOps();
 </script>
 </body>
 </html>
