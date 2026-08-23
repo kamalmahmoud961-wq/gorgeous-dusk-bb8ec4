@@ -502,13 +502,23 @@ function logout(){
   document.getElementById('lIdentifier').value='';document.getElementById('lPass').value='';
 }
 
-function techTab(tab){
+/* ============================================================================
+   إصلاح 24 أغسطس 2026: قبل كده تبويبات الفني/المبيعات كانت بترسم من allOps
+   القديمة اللي اتحملت مرة واحدة بس وقت تسجيل الدخول، فلو الأدمن اعتمد عملية
+   بعد ما المستخدم يفتح التطبيق، كانت تفضل ظاهرة "انتظار" عنده لحد ما يعمل
+   تسجيل خروج ودخول تاني. دلوقتي: بنعمل loadOps() (تحميل فريش من السيرفر)
+   قبل عرض تبويب الرئيسية أو عملياتي، عشان الحالة اللي المستخدم شايفها تكون
+   مطابقة لآخر تحديث فعلي.
+   ============================================================================ */
+async function techTab(tab){
   ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('tech'+t).style.display=t===tab?'block':'none';document.getElementById('tNav'+t).classList.toggle('active',t===tab);});
-  if(tab==='Home')renderTechHome();if(tab==='MyOps')renderMyOps();
+  if(tab==='Home'){await loadOps();renderTechHome();}
+  if(tab==='MyOps'){await loadOps();renderMyOps();}
 }
-function salesTab(tab){
+async function salesTab(tab){
   ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('sales'+t).style.display=t===tab?'block':'none';document.getElementById('sNav'+t).classList.toggle('active',t===tab);});
-  if(tab==='Home')renderSalesHome();if(tab==='MyOps')renderSalesMyOps();
+  if(tab==='Home'){await loadOps();renderSalesHome();}
+  if(tab==='MyOps'){await loadOps();renderSalesMyOps();}
 }
 function adminTab(tab){
   ['Home','AllOps','Rewards'].forEach(t=>{document.getElementById('admin'+t).style.display=t===tab?'block':'none';document.getElementById('aNav'+t).classList.toggle('active',t===tab);});
@@ -713,7 +723,7 @@ function calcRewards(){
   el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
 }
 
-setInterval(()=>{if(currentRole==='admin')loadOps();resyncPendingOps();},30000);
+setInterval(()=>{if(currentRole)loadOps();resyncPendingOps();},30000);
 resyncPendingOps();
 </script>
 </body>
