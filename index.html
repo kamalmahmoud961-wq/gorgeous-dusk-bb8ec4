@@ -159,7 +159,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     </div>
     <div class="inp-g"><label>الاسم بالكامل</label><input type="text" id="rName" placeholder="الاسم بالكامل"></div>
     <div class="inp-g"><label>رقم التليفون</label><input type="tel" id="rPhone" placeholder="01xxxxxxxxx"></div>
-    <div class="inp-g"><label>رقم البطاقة</label><input type="number" id="rNatID" placeholder="رقم البطاقة" inputmode="numeric"></div>
+    <div class="inp-g"><label>رقم البطاقة</label><input type="text" id="rNatID" placeholder="رقم البطاقة" inputmode="numeric" pattern="[0-9]*"></div>
     <div class="inp-g"><label>رقم محفظة كاش</label><input type="tel" id="rWallet" placeholder="رقم المحفظة"></div>
     <div class="inp-g"><label>اسم الشركة / الفرع</label><input type="text" id="rCompany" placeholder="اسم الشركة أو الفرع"></div>
     <div class="inp-g"><label>كلمة المرور</label><input type="password" id="rPass" placeholder="اختار كلمة مرور"></div>
@@ -181,7 +181,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div class="accent-line"></div>
     <div id="forgotStep1">
       <div class="inp-g"><label>رقم التليفون</label><input type="tel" id="fPhone" placeholder="01xxxxxxxxx"></div>
-      <div class="inp-g"><label>رقم البطاقة</label><input type="number" id="fNatID" placeholder="رقم البطاقة" inputmode="numeric"></div>
+      <div class="inp-g"><label>رقم البطاقة</label><input type="text" id="fNatID" placeholder="رقم البطاقة" inputmode="numeric" pattern="[0-9]*"></div>
       <div id="forgotErr" class="error-msg"></div>
       <button class="btn-main" onclick="verifyForgot()" id="forgotBtn">تحقق</button>
     </div>
@@ -216,6 +216,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div class="error-msg" id="tErrMsg"></div>
     <div class="card">
       <div class="card-title">🔧 تسجيل تركيب جديد</div>
+      <div class="fg"><label>اسم العميل</label><input type="text" id="tClientName" placeholder="اسم العميل"></div>
+      <div class="fg"><label>رقم تليفون العميل</label><input type="tel" id="tClientPhone" placeholder="01xxxxxxxxx" inputmode="numeric"></div>
       <div class="fg"><label>سيريال الوحدة الداخلية</label><input type="text" id="tSerialIn" placeholder="IN-2024-12345"></div>
       <div class="fg"><label>سيريال الوحدة الخارجية</label><input type="text" id="tSerialOut" placeholder="OUT-2024-12345"></div>
       <div class="fg"><label>صوره شهادة الضمان كاملة البيانات</label>
@@ -227,7 +229,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
           <div class="uploading" id="tUploading">⏳ جاري رفع الصورة...</div>
         </div>
       </div>
-      <button class="btn-main" onclick="submitTechOp()" id="tSubmitBtn">تسجيل التركيب</button>
+      <button class="btn-main" onclick="submitTechOp()" id="tSubmitBtn">رفع شهادة الضمان</button>
     </div>
   </div>
   <div id="techMyOps" class="content" style="display:none">
@@ -263,6 +265,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div class="card">
       <div class="card-title">💼 تسجيل بيع جديد</div>
       <div class="fg"><label>اسم العميل</label><input type="text" id="sClient" placeholder="اسم العميل"></div>
+      <div class="fg"><label>رقم تليفون العميل</label><input type="tel" id="sClientPhone" placeholder="01xxxxxxxxx" inputmode="numeric"></div>
       <div class="fg"><label>اسم الموزع</label><input type="text" id="sDistributor" placeholder="اسم الموزع"></div>
       <div class="fg"><label>رقم الفاتورة</label><input type="text" id="sInvoice" placeholder="رقم الفاتورة"></div>
       <div class="fg"><label>صورة الفاتورة</label>
@@ -349,7 +352,7 @@ const ADMIN_PASS='Cnd_d69Wscx9h1QINm!9'; // تم تغييره 16 أغسطس 2026
 let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null;
 
 function getLocalUsers(){try{return JSON.parse(localStorage.getItem('condor_users')||'[]');}catch(e){return[];}}
-function saveLocalUser(u){const users=getLocalUsers();users.push(u);localStorage.setItem('condor_users',JSON.stringify(users));}
+function saveLocalUser(u){const users=getLocalUsers();const idx=users.findIndex(x=>String(x.phone)===String(u.phone)||String(x.natid)===String(u.natid));if(idx>=0){users[idx]={...users[idx],...u};}else{users.push(u);}localStorage.setItem('condor_users',JSON.stringify(users));}
 function findLocalUser(identifier,pass){const users=getLocalUsers();return users.find(u=>(String(u.phone)===String(identifier)||String(u.natid)===String(identifier))&&String(u.pass)===String(pass));}
 function getLocalOps(){try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}}
 function saveLocalOp(op){const ops=getLocalOps();ops.push(op);localStorage.setItem('condor_ops',JSON.stringify(ops));}
@@ -529,7 +532,7 @@ async function loadOps(){
   const localOps=getLocalOps();
   try{
     const r=await fetch(API+'?sheet=operations');const rows=await r.json();
-    const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
+    const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],clientPhone:r[11]||'',distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
     allOps=[...serverOps,...onlyLocal];
@@ -548,8 +551,8 @@ async function resyncPendingOps(){
   const unsynced=localOps.filter(o=>o.synced===false);
   for(const op of unsynced){
     const row=op.type==='technician'
-      ?[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month]
-      :[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',op.distributor,op.invoice];
+      ?[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,op.clientPhone||'']
+      :[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,op.clientPhone||'','',op.distributor,op.invoice];
     const ok=await postToAPI({sheet:'operations',row});
     if(ok){
       updateLocalOp(op.id,{synced:true});
@@ -566,10 +569,14 @@ function updateSyncBanner(){
 }
 
 async function submitTechOp(){
+  const tClientName=document.getElementById('tClientName').value.trim();
+  const tClientPhone=document.getElementById('tClientPhone').value.trim();
   const sin=document.getElementById('tSerialIn').value.trim();
   const sout=document.getElementById('tSerialOut').value.trim();
   const imgInput=document.getElementById('tImg');
   const errEl=document.getElementById('tErrMsg');errEl.style.display='none';
+  if(!tClientName){showErr(errEl,'ادخل اسم العميل');return;}
+  if(!tClientPhone){showErr(errEl,'ادخل رقم تليفون العميل');return;}
   if(!sin){showErr(errEl,'ادخل سيريال الوحدة الداخلية');return;}
   if(!sout){showErr(errEl,'ادخل سيريال الوحدة الخارجية');return;}
   if(!imgInput.files[0]){showErr(errEl,'ارفع صورة شهادة الضمان');return;}
@@ -581,29 +588,31 @@ async function submitTechOp(){
     if(dupOut){showErr(errEl,'سيريال الوحدة الخارجية مسجل من قبل!');return;}
     btn.disabled=true;btn.textContent='جاري الرفع...';document.getElementById('tUploading').style.display='block';
     let imgUrl='';
-    try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='تسجيل التركيب';return;}
-    const op={id:String(Date.now()),type:'technician',user:currentUser,phone:currentUserData?.phone||'',serialIn:sin,serialOut:sout,client:'',distributor:'',invoice:'',imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth(),synced:false};
+    try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='رفع شهادة الضمان';return;}
+    const op={id:String(Date.now()),type:'technician',user:currentUser,phone:currentUserData?.phone||'',serialIn:sin,serialOut:sout,client:tClientName,clientPhone:tClientPhone,distributor:'',invoice:'',imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth(),synced:false};
     saveLocalOp(op);allOps.push(op);
-    const ok=await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month]});
+    const ok=await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,op.clientPhone||'']});
     if(ok){updateLocalOp(op.id,{synced:true});op.synced=true;}
-    document.getElementById('tSerialIn').value='';document.getElementById('tSerialOut').value='';document.getElementById('tImg').value='';document.getElementById('tImgPrev').style.display='none';document.getElementById('tUploading').style.display='none';
+    document.getElementById('tClientName').value='';document.getElementById('tClientPhone').value='';document.getElementById('tSerialIn').value='';document.getElementById('tSerialOut').value='';document.getElementById('tImg').value='';document.getElementById('tImgPrev').style.display='none';document.getElementById('tUploading').style.display='none';
     if(ok){
       const msg=document.getElementById('tSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
     }else{
       const wmsg=document.getElementById('tWarnMsg');wmsg.style.display='block';setTimeout(()=>wmsg.style.display='none',5000);
     }
     updateSyncBanner();
-    renderTechHome();btn.disabled=false;btn.textContent='تسجيل التركيب';
-  }catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');btn.disabled=false;btn.textContent='تسجيل التركيب';}
+    renderTechHome();btn.disabled=false;btn.textContent='رفع شهادة الضمان';
+  }catch(e){document.getElementById('tUploading').style.display='none';showErr(errEl,'حصل خطأ غير متوقع، جرب تاني');btn.disabled=false;btn.textContent='رفع شهادة الضمان';}
 }
 
 async function submitSalesOp(){
   const client=document.getElementById('sClient').value.trim();
+  const sClientPhone=document.getElementById('sClientPhone').value.trim();
   const distributor=document.getElementById('sDistributor').value.trim();
   const invoice=document.getElementById('sInvoice').value.trim();
   const imgInput=document.getElementById('sImg');
   const errEl=document.getElementById('sErrMsg');errEl.style.display='none';
   if(!client){showErr(errEl,'ادخل اسم العميل');return;}
+  if(!sClientPhone){showErr(errEl,'ادخل رقم تليفون العميل');return;}
   if(!distributor){showErr(errEl,'ادخل اسم الموزع');return;}
   if(!invoice){showErr(errEl,'ادخل رقم الفاتورة');return;}
   if(!imgInput.files[0]){showErr(errEl,'ارفع صورة الفاتورة');return;}
@@ -614,11 +623,11 @@ async function submitSalesOp(){
     btn.disabled=true;btn.textContent='جاري الرفع...';document.getElementById('sUploading').style.display='block';
     let imgUrl='';
     try{imgUrl=await uploadToCloudinary(imgInput.files[0]);}catch(e){document.getElementById('sUploading').style.display='none';showErr(errEl,'فشل رفع الصورة، جرب تاني');btn.disabled=false;btn.textContent='تسجيل البيع';return;}
-    const op={id:String(Date.now()),type:'sales',user:currentUser,phone:currentUserData?.phone||'',serialIn:'',serialOut:'',client,distributor,invoice,imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth(),synced:false};
+    const op={id:String(Date.now()),type:'sales',user:currentUser,phone:currentUserData?.phone||'',serialIn:'',serialOut:'',client,clientPhone:sClientPhone,distributor,invoice,imgUrl,status:'pending',date:new Date().toLocaleDateString('ar-EG'),month:new Date().getMonth(),synced:false};
     saveLocalOp(op);allOps.push(op);
-    const ok=await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,'','',distributor,invoice]});
+    const ok=await postToAPI({sheet:'operations',row:[op.id,op.type,op.user,op.phone,op.serialIn,op.serialOut,op.client,op.imgUrl,op.status,op.date,op.month,op.clientPhone||'','',distributor,invoice]});
     if(ok){updateLocalOp(op.id,{synced:true});op.synced=true;}
-    document.getElementById('sClient').value='';document.getElementById('sDistributor').value='';document.getElementById('sInvoice').value='';document.getElementById('sImg').value='';document.getElementById('sImgPrev').style.display='none';document.getElementById('sUploading').style.display='none';
+    document.getElementById('sClient').value='';document.getElementById('sClientPhone').value='';document.getElementById('sDistributor').value='';document.getElementById('sInvoice').value='';document.getElementById('sImg').value='';document.getElementById('sImgPrev').style.display='none';document.getElementById('sUploading').style.display='none';
     if(ok){
       const msg=document.getElementById('sSuccessMsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);
     }else{
@@ -697,8 +706,8 @@ function renderAdminHome(){
 function adminOpHTML(o){
   const badge=o.status==='pending'?'<span class="badge b-pending">⏳ انتظار</span>':o.status==='approved'?'<span class="badge b-approved">✅ معتمد</span>':'<span class="badge b-rejected">❌ مرفوض</span>';
   const syncBadge=o.synced===false?' <span class="badge b-unsynced">🔄 بيتزامن</span>':'';
-  const main=o.type==='technician'?`🔧 ${o.user} | داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`:`💼 ${o.user} | عميل: ${o.client}${o.distributor?' | موزع: '+o.distributor:''}${o.invoice?' | فاتورة: '+o.invoice:''}`;
-  const imgBtn=o.imgUrl?`<a href="${o.imgUrl}" target="_blank" class="btn-img">📷 صورة</a>`:'';
+  const main=o.type==='technician'?`🔧 ${o.user} | ${o.client?' عميل: '+o.client+' |':''} ${o.clientPhone?'📞 '+o.clientPhone+' |':''} داخلي: ${o.serialIn} | خارجي: ${o.serialOut}`:`💼 ${o.user} | عميل: ${o.client}${o.clientPhone?' | 📞 '+o.clientPhone:''}${o.distributor?' | موزع: '+o.distributor:''}${o.invoice?' | فاتورة: '+o.invoice:''}`;
+  const imgBtn=o.imgUrl?`<a href="${o.imgUrl}" target="_blank" class="btn-img">${o.type==='technician'?'📋 شهادة ضمان':'📷 فاتورة'}</a>`:'';
   const actions=o.status==='pending'?`<div class="aop-actions">${imgBtn}<button class="btn-approve" onclick="updateStatus('${o.id}','approved',this)">✅ اعتماد</button><button class="btn-reject" onclick="updateStatus('${o.id}','rejected',this)">❌ رفض</button></div>`:`<div class="aop-actions">${imgBtn}</div>`;
   return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}${syncBadge}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
 }
