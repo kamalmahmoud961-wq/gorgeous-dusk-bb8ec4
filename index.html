@@ -138,7 +138,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center">
       <p style="font-size:11px;color:var(--muted);margin-bottom:4px">في مشكلة؟ تواصل معنا</p>
       <a href="tel:01060005373" style="font-size:15px;font-weight:700;color:var(--blue);text-decoration:none;direction:ltr;display:inline-block">📞 01060005373</a>
-      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.4</p>
+      <p style="font-size:10px;color:#cbd5e1;margin-top:10px">v1.6</p>
     </div>
   </div>
 </div>
@@ -491,8 +491,8 @@ async function resetPassword(){
   btn.disabled=false;btn.textContent='تغيير كلمة المرور';
 }
 
-function showTechScreen(){hideAll();document.getElementById('techUserName').textContent=currentUser;document.getElementById('techScreen').classList.add('active');techTab('Home');loadOps();}
-function showSalesScreen(){hideAll();document.getElementById('salesUserName').textContent=currentUser;document.getElementById('salesScreen').classList.add('active');salesTab('Home');loadOps();}
+function showTechScreen(){hideAll();document.getElementById('techUserName').textContent=currentUser;document.getElementById('techScreen').classList.add('active');allOps=getLocalOps();renderTechHome();techTab('Home');}
+function showSalesScreen(){hideAll();document.getElementById('salesUserName').textContent=currentUser;document.getElementById('salesScreen').classList.add('active');allOps=getLocalOps();renderSalesHome();salesTab('Home');}
 function showAdminScreen(){
   hideAll();document.getElementById('adminScreen').classList.add('active');
   const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -515,13 +515,13 @@ function logout(){
    ============================================================================ */
 async function techTab(tab){
   ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('tech'+t).style.display=t===tab?'block':'none';document.getElementById('tNav'+t).classList.toggle('active',t===tab);});
-  if(tab==='Home'){await loadOps();renderTechHome();}
-  if(tab==='MyOps'){await loadOps();renderMyOps();}
+  if(tab==='Home'){renderTechHome();loadOps();}
+  if(tab==='MyOps'){renderMyOps();loadOps();}
 }
 async function salesTab(tab){
   ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('sales'+t).style.display=t===tab?'block':'none';document.getElementById('sNav'+t).classList.toggle('active',t===tab);});
-  if(tab==='Home'){await loadOps();renderSalesHome();}
-  if(tab==='MyOps'){await loadOps();renderSalesMyOps();}
+  if(tab==='Home'){renderSalesHome();loadOps();}
+  if(tab==='MyOps'){renderSalesMyOps();loadOps();}
 }
 function adminTab(tab){
   ['Home','AllOps','Rewards'].forEach(t=>{document.getElementById('admin'+t).style.display=t===tab?'block':'none';document.getElementById('aNav'+t).classList.toggle('active',t===tab);});
@@ -530,8 +530,10 @@ function adminTab(tab){
 
 async function loadOps(){
   const localOps=getLocalOps();
+  // عرض البيانات المحلية فوراً بدون انتظار
+  if(!allOps.length){allOps=localOps;}
   try{
-    const r=await fetch(API+'?sheet=operations');const rows=await r.json();
+    const r=await fetch(API+'?sheet=operations',{signal:AbortSignal.timeout(8000)});const rows=await r.json();
     const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],clientPhone:r[11]||'',distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
