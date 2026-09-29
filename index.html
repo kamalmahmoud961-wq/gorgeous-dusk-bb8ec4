@@ -355,6 +355,9 @@ function getLocalUsers(){try{return JSON.parse(localStorage.getItem('condor_user
 function saveLocalUser(u){const users=getLocalUsers();const idx=users.findIndex(x=>String(x.phone)===String(u.phone)||String(x.natid)===String(u.natid));if(idx>=0){users[idx]={...users[idx],...u};}else{users.push(u);}localStorage.setItem('condor_users',JSON.stringify(users));}
 function findLocalUser(identifier,pass){const users=getLocalUsers();return users.find(u=>(String(u.phone)===String(identifier)||String(u.natid)===String(identifier))&&String(u.pass)===String(pass));}
 function getLocalOps(){try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}}
+function getPendingUpdates(){try{return JSON.parse(localStorage.getItem('condor_updates')||'[]');}catch(e){return[];}}
+function savePendingUpdate(u){const arr=getPendingUpdates();arr.push(u);localStorage.setItem('condor_updates',JSON.stringify(arr));}
+function clearPendingUpdate(id){const arr=getPendingUpdates().filter(u=>u.id!==id);localStorage.setItem('condor_updates',JSON.stringify(arr));}
 function saveLocalOp(op){const ops=getLocalOps();ops.push(op);localStorage.setItem('condor_ops',JSON.stringify(ops));}
 function updateLocalOp(id,patch){const ops=getLocalOps();const o=ops.find(x=>String(x.id)===String(id));if(o){Object.assign(o,patch);localStorage.setItem('condor_ops',JSON.stringify(ops));}}
 
@@ -548,6 +551,14 @@ async function loadOps(){
    (synced:false) بنحاول نبعتها تاني هنا، عشان محدش يفقد عمليته لو حصل بطء
    أو انقطاع نت وقت التسجيل. بتتنفذ عند فتح أي شاشة وكل 30 ثانية.
    ============================================================================ */
+async function resyncPendingUpdates(){
+  const pending=getPendingUpdates();
+  for(const u of pending){
+    const ok=await postToAPI({sheet:'updates',row:[u.id,u.status,u.date]});
+    if(ok)clearPendingUpdate(u.id);
+  }
+}
+
 async function resyncPendingOps(){
   const localOps=getLocalOps();
   const unsynced=localOps.filter(o=>o.synced===false);
@@ -646,17 +657,15 @@ async function submitSalesOp(){
    سجلات متضاربة (approved/rejected) لنفس العملية زي ما حصل قبل كده.
    ============================================================================ */
 async function updateStatus(id,status,btnEl){
-  if(btnEl){
-    const row=btnEl.closest('.aop-actions');
-    if(row)row.querySelectorAll('button').forEach(b=>b.disabled=true);
-  }
+  if(btnEl){const row=btnEl.closest('.aop-actions');if(row)row.querySelectorAll('button').forEach(b=>b.disabled=true);}
   const op=allOps.find(o=>String(o.id)===String(id));if(!op)return;op.status=status;
   const localOps=getLocalOps();const lo=localOps.find(o=>String(o.id)===String(id));
   if(lo){lo.status=status;}else{localOps.push({...op});}
   localStorage.setItem('condor_ops',JSON.stringify(localOps));
-  const ok=await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});
-  if(!ok){alert('⚠️ اتحفظ التحديث على جهازك بس فشل يوصل للسيرفر. جرب تاني لما النت يستقر.');}
   renderAdminHome();renderAllOps('all');
+  const dateStr=new Date().toLocaleDateString('ar-EG');
+  savePendingUpdate({id,status,date:dateStr});
+  postToAPI({sheet:'updates',row:[id,status,dateStr]}).then(ok=>{if(ok)clearPendingUpdate(id);});
 }
 
 function opHTML(o){
@@ -734,8 +743,8 @@ function calcRewards(){
   el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
 }
 
-setInterval(()=>{if(currentRole)loadOps();resyncPendingOps();},30000);
-resyncPendingOps();
+setInterval(()=>{if(currentRole)loadOps();resyncPendingOps();resyncPendingUpdates();},30000);
+resyncPendingOps();resyncPendingUpdates();
 </script>
 </body>
 </html>
