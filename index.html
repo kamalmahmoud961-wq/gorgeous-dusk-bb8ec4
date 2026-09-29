@@ -741,15 +741,66 @@ function renderAllOps(filter,reset=true){
 function filterOps(f){renderAllOps(f);}
 
 function calcRewards(){
-  const tAmt=parseInt(document.getElementById('techAmt').value)||150;const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
-  const thisMonth=new Date().getMonth();const approved=allOps.filter(o=>o.status==='approved'&&o.month===thisMonth);
-  const summary={};approved.forEach(o=>{if(!summary[o.user])summary[o.user]={type:o.type,count:0};summary[o.user].count++;});
-  const el=document.getElementById('rewardList');const res=document.getElementById('rewardResult');
-  if(!Object.keys(summary).length){el.innerHTML='<div class="empty"><div class="ei">📊</div><p>مفيش عمليات معتمدة الشهر ده</p></div>';res.style.display='block';return;}
-  const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count);
-  let html='',total=0;
-  sorted.forEach(([user,d])=>{const amt=d.type==='technician'?tAmt:sAmt;const reward=d.count*amt;total+=reward;html+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية × ${amt} ج</div></div><div class="reward-amt">${reward} ج</div></div>`;});
-  html+=`<div class="reward-item" style="border-top:2px solid #e2e8f0;margin-top:8px;padding-top:14px"><div><div class="reward-name" style="color:var(--navy)">الإجمالي</div></div><div class="reward-amt" style="font-size:20px">${total} ج</div></div>`;
+  const tAmt=parseInt(document.getElementById('techAmt').value)||150;
+  const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
+  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const approved=allOps.filter(o=>o.status==='approved');
+  const el=document.getElementById('rewardList');
+  const res=document.getElementById('rewardResult');
+  if(!approved.length){el.innerHTML='<div class="empty"><div class="ei">📊</div><p>مفيش عمليات معتمدة</p></div>';res.style.display='block';return;}
+
+  // تجميع حسب الشهر
+  const byMonth={};
+  approved.forEach(o=>{
+    const m=o.month;
+    if(!byMonth[m])byMonth[m]={};
+    if(!byMonth[m][o.user])byMonth[m][o.user]={type:o.type,count:0};
+    byMonth[m][o.user].count++;
+  });
+
+  let html='';
+  let grandTotal=0;
+  const grandSummary={};
+
+  // عرض كل شهر
+  Object.keys(byMonth).sort((a,b)=>Number(a)-Number(b)).forEach(m=>{
+    const summary=byMonth[m];
+    const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count);
+    let monthTotal=0;
+    let monthHtml='';
+    sorted.forEach(([user,d])=>{
+      const amt=d.type==='technician'?tAmt:sAmt;
+      const reward=d.count*amt;
+      monthTotal+=reward;grandTotal+=reward;
+      if(!grandSummary[user])grandSummary[user]={type:d.type,count:0,total:0};
+      grandSummary[user].count+=d.count;grandSummary[user].total+=reward;
+      monthHtml+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية × ${amt} ج</div></div><div class="reward-amt">${reward} ج</div></div>`;
+    });
+    html+=`<div class="card" style="margin-bottom:12px">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📅 ${months[Number(m)]}</span>
+        <span style="color:var(--success);font-size:16px;font-weight:900">${monthTotal} ج</span>
+      </div>
+      ${monthHtml}
+    </div>`;
+  });
+
+  // الإجمالي الكلي
+  if(Object.keys(byMonth).length>1){
+    const grandSorted=Object.entries(grandSummary).sort((a,b)=>b[1].total-a[1].total);
+    let grandHtml='';
+    grandSorted.forEach(([user,d])=>{
+      grandHtml+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية إجمالي</div></div><div class="reward-amt">${d.total} ج</div></div>`;
+    });
+    html+=`<div class="card" style="border:2px solid var(--navy);margin-bottom:12px">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>💰 الإجمالي الكلي</span>
+        <span style="color:var(--navy);font-size:20px;font-weight:900">${grandTotal} ج</span>
+      </div>
+      ${grandHtml}
+    </div>`;
+  }
+
   el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
 }
 
