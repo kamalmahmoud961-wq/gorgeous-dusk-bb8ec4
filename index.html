@@ -349,7 +349,7 @@ const UPLOAD_PRESET='ml_default';
 const ADMIN_USER='Mahmoudkamal';
 const ADMIN_PASS='Cnd_d69Wscx9h1QINm!9'; // تم تغييره 16 أغسطس 2026 - الباسورد القديم كان متسرّب في الكود العلني. غيّره تاني لو شاركته مع حد.
 
-let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null;
+let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null,lastLoadTime=0;
 
 function getLocalUsers(){try{return JSON.parse(localStorage.getItem('condor_users')||'[]');}catch(e){return[];}}
 function saveLocalUser(u){const users=getLocalUsers();const idx=users.findIndex(x=>String(x.phone)===String(u.phone)||String(x.natid)===String(u.natid));if(idx>=0){users[idx]={...users[idx],...u};}else{users.push(u);}localStorage.setItem('condor_users',JSON.stringify(users));}
@@ -535,12 +535,15 @@ async function loadOps(){
   const localOps=getLocalOps();
   // عرض البيانات المحلية فوراً بدون انتظار
   if(!allOps.length){allOps=localOps;}
+  // تخطي التحميل لو البيانات أقل من 60 ثانية
+  const now=Date.now();
+  if(now-lastLoadTime<60000&&allOps.length){if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();updateSyncBanner();return;}
   try{
     const r=await fetch(API+'?sheet=operations',{signal:AbortSignal.timeout(8000)});const rows=await r.json();
     const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],clientPhone:r[11]||'',distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
-    allOps=[...serverOps,...onlyLocal];
+    allOps=[...serverOps,...onlyLocal];lastLoadTime=Date.now();
   }catch(e){allOps=localOps;}
   if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();
   updateSyncBanner();
@@ -711,7 +714,7 @@ function renderSalesMyOps(){const my=allOps.filter(o=>o.type==='sales'&&o.user==
 function renderAdminHome(){
   const pending=allOps.filter(o=>o.status==='pending');const approved=allOps.filter(o=>o.status==='approved');const rejected=allOps.filter(o=>o.status==='rejected');
   document.getElementById('aPending').textContent=pending.length;document.getElementById('aApproved').textContent=approved.length;document.getElementById('aRejected').textContent=rejected.length;document.getElementById('aTotal').textContent=allOps.length;
-  document.getElementById('aPendingList').innerHTML=pending.length?pending.slice().reverse().map(adminOpHTML).join(''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
+  const pendingShow=pending.slice(-30).reverse();document.getElementById('aPendingList').innerHTML=pendingShow.length?pendingShow.map(adminOpHTML).join('')+(pending.length>30?`<p style="text-align:center;color:var(--muted);padding:10px;font-size:13px">+ ${pending.length-30} عملية أقدم — شوفهم من تاب العمليات</p>`:''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
 }
 
 function adminOpHTML(o){
@@ -723,10 +726,17 @@ function adminOpHTML(o){
   return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}${syncBadge}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
 }
 
-function renderAllOps(filter){
+let _opsPage=50;
+function renderAllOps(filter,reset=true){
   ['all','technician','sales'].forEach(f=>{document.getElementById(f==='all'?'fAll':f==='technician'?'fTech':'fSales').classList.toggle('active',f===filter);});
+  if(reset)_opsPage=50;
   let ops=filter==='all'?allOps:allOps.filter(o=>o.type===filter);
-  document.getElementById('aAllList').innerHTML=ops.slice().reverse().map(adminOpHTML).join('')||'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
+  const sorted=ops.slice().reverse();
+  const shown=sorted.slice(0,_opsPage);
+  const more=sorted.length>_opsPage;
+  const el=document.getElementById('aAllList');
+  el.innerHTML=shown.map(adminOpHTML).join('')||'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
+  if(more){el.innerHTML+=`<div style="text-align:center;padding:14px"><button class="btn-main" style="max-width:200px;padding:10px" onclick="_opsPage+=50;renderAllOps('${filter}',false)">تحميل المزيد (${sorted.length-_opsPage} باقي)</button></div>`;}
 }
 function filterOps(f){renderAllOps(f);}
 
