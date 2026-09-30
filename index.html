@@ -313,7 +313,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
       <button class="tab" onclick="filterOps('technician')" id="fTech">فنيين</button>
       <button class="tab" onclick="filterOps('sales')" id="fSales">مبيعات</button>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <select id="filterMonth" onchange="applyFilters()" style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:13px;outline:none;background:white">
         <option value="">كل الشهور</option>
         <option value="0">يناير</option><option value="1">فبراير</option><option value="2">مارس</option>
@@ -365,15 +365,12 @@ const UPLOAD_PRESET='ml_default';
 const ADMIN_USER='Mahmoudkamal';
 const ADMIN_PASS='Cnd_d69Wscx9h1QINm!9'; // تم تغييره 16 أغسطس 2026 - الباسورد القديم كان متسرّب في الكود العلني. غيّره تاني لو شاركته مع حد.
 
-let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null,lastLoadTime=0;
+let currentUser=null,currentRole=null,currentUserData=null,selectedRole=null,regRole=null,allOps=[],forgotUserId=null;
 
 function getLocalUsers(){try{return JSON.parse(localStorage.getItem('condor_users')||'[]');}catch(e){return[];}}
 function saveLocalUser(u){const users=getLocalUsers();const idx=users.findIndex(x=>String(x.phone)===String(u.phone)||String(x.natid)===String(u.natid));if(idx>=0){users[idx]={...users[idx],...u};}else{users.push(u);}localStorage.setItem('condor_users',JSON.stringify(users));}
 function findLocalUser(identifier,pass){const users=getLocalUsers();return users.find(u=>(String(u.phone)===String(identifier)||String(u.natid)===String(identifier))&&String(u.pass)===String(pass));}
 function getLocalOps(){try{return JSON.parse(localStorage.getItem('condor_ops')||'[]');}catch(e){return[];}}
-function getPendingUpdates(){try{return JSON.parse(localStorage.getItem('condor_updates')||'[]');}catch(e){return[];}}
-function savePendingUpdate(u){const arr=getPendingUpdates();arr.push(u);localStorage.setItem('condor_updates',JSON.stringify(arr));}
-function clearPendingUpdate(id){const arr=getPendingUpdates().filter(u=>u.id!==id);localStorage.setItem('condor_updates',JSON.stringify(arr));}
 function saveLocalOp(op){const ops=getLocalOps();ops.push(op);localStorage.setItem('condor_ops',JSON.stringify(ops));}
 function updateLocalOp(id,patch){const ops=getLocalOps();const o=ops.find(x=>String(x.id)===String(id));if(o){Object.assign(o,patch);localStorage.setItem('condor_ops',JSON.stringify(ops));}}
 
@@ -510,8 +507,8 @@ async function resetPassword(){
   btn.disabled=false;btn.textContent='تغيير كلمة المرور';
 }
 
-function showTechScreen(){hideAll();document.getElementById('techUserName').textContent=currentUser;document.getElementById('techScreen').classList.add('active');allOps=getLocalOps();renderTechHome();techTab('Home');}
-function showSalesScreen(){hideAll();document.getElementById('salesUserName').textContent=currentUser;document.getElementById('salesScreen').classList.add('active');allOps=getLocalOps();renderSalesHome();salesTab('Home');}
+function showTechScreen(){hideAll();document.getElementById('techUserName').textContent=currentUser;document.getElementById('techScreen').classList.add('active');techTab('Home');loadOps();}
+function showSalesScreen(){hideAll();document.getElementById('salesUserName').textContent=currentUser;document.getElementById('salesScreen').classList.add('active');salesTab('Home');loadOps();}
 function showAdminScreen(){
   hideAll();document.getElementById('adminScreen').classList.add('active');
   const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -534,13 +531,13 @@ function logout(){
    ============================================================================ */
 async function techTab(tab){
   ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('tech'+t).style.display=t===tab?'block':'none';document.getElementById('tNav'+t).classList.toggle('active',t===tab);});
-  if(tab==='Home'){renderTechHome();loadOps();}
-  if(tab==='MyOps'){renderMyOps();loadOps();}
+  if(tab==='Home'){await loadOps();renderTechHome();}
+  if(tab==='MyOps'){await loadOps();renderMyOps();}
 }
 async function salesTab(tab){
   ['Home','NewOp','MyOps'].forEach(t=>{document.getElementById('sales'+t).style.display=t===tab?'block':'none';document.getElementById('sNav'+t).classList.toggle('active',t===tab);});
-  if(tab==='Home'){renderSalesHome();loadOps();}
-  if(tab==='MyOps'){renderSalesMyOps();loadOps();}
+  if(tab==='Home'){await loadOps();renderSalesHome();}
+  if(tab==='MyOps'){await loadOps();renderSalesMyOps();}
 }
 function adminTab(tab){
   ['Home','AllOps','Rewards'].forEach(t=>{document.getElementById('admin'+t).style.display=t===tab?'block':'none';document.getElementById('aNav'+t).classList.toggle('active',t===tab);});
@@ -549,17 +546,12 @@ function adminTab(tab){
 
 async function loadOps(){
   const localOps=getLocalOps();
-  // عرض البيانات المحلية فوراً بدون انتظار
-  if(!allOps.length){allOps=localOps;}
-  // تخطي التحميل لو البيانات أقل من 60 ثانية
-  const now=Date.now();
-  if(now-lastLoadTime<60000&&allOps.length){if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();updateSyncBanner();return;}
   try{
-    const r=await fetch(API+'?sheet=operations',{signal:AbortSignal.timeout(8000)});const rows=await r.json();
+    const r=await fetch(API+'?sheet=operations');const rows=await r.json();
     const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],clientPhone:r[11]||'',distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
-    allOps=[...serverOps,...onlyLocal];lastLoadTime=Date.now();
+    allOps=[...serverOps,...onlyLocal];
   }catch(e){allOps=localOps;}
   if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();
   updateSyncBanner();
@@ -570,14 +562,6 @@ async function loadOps(){
    (synced:false) بنحاول نبعتها تاني هنا، عشان محدش يفقد عمليته لو حصل بطء
    أو انقطاع نت وقت التسجيل. بتتنفذ عند فتح أي شاشة وكل 30 ثانية.
    ============================================================================ */
-async function resyncPendingUpdates(){
-  const pending=getPendingUpdates();
-  for(const u of pending){
-    const ok=await postToAPI({sheet:'updates',row:[u.id,u.status,u.date]});
-    if(ok)clearPendingUpdate(u.id);
-  }
-}
-
 async function resyncPendingOps(){
   const localOps=getLocalOps();
   const unsynced=localOps.filter(o=>o.synced===false);
@@ -676,15 +660,17 @@ async function submitSalesOp(){
    سجلات متضاربة (approved/rejected) لنفس العملية زي ما حصل قبل كده.
    ============================================================================ */
 async function updateStatus(id,status,btnEl){
-  if(btnEl){const row=btnEl.closest('.aop-actions');if(row)row.querySelectorAll('button').forEach(b=>b.disabled=true);}
+  if(btnEl){
+    const row=btnEl.closest('.aop-actions');
+    if(row)row.querySelectorAll('button').forEach(b=>b.disabled=true);
+  }
   const op=allOps.find(o=>String(o.id)===String(id));if(!op)return;op.status=status;
   const localOps=getLocalOps();const lo=localOps.find(o=>String(o.id)===String(id));
   if(lo){lo.status=status;}else{localOps.push({...op});}
   localStorage.setItem('condor_ops',JSON.stringify(localOps));
+  const ok=await postToAPI({sheet:'updates',row:[id,status,new Date().toLocaleDateString('ar-EG')]});
+  if(!ok){alert('⚠️ اتحفظ التحديث على جهازك بس فشل يوصل للسيرفر. جرب تاني لما النت يستقر.');}
   renderAdminHome();renderAllOps('all');
-  const dateStr=new Date().toLocaleDateString('ar-EG');
-  savePendingUpdate({id,status,date:dateStr});
-  postToAPI({sheet:'updates',row:[id,status,dateStr]}).then(ok=>{if(ok)clearPendingUpdate(id);});
 }
 
 function opHTML(o){
@@ -730,7 +716,7 @@ function renderSalesMyOps(){const my=allOps.filter(o=>o.type==='sales'&&o.user==
 function renderAdminHome(){
   const pending=allOps.filter(o=>o.status==='pending');const approved=allOps.filter(o=>o.status==='approved');const rejected=allOps.filter(o=>o.status==='rejected');
   document.getElementById('aPending').textContent=pending.length;document.getElementById('aApproved').textContent=approved.length;document.getElementById('aRejected').textContent=rejected.length;document.getElementById('aTotal').textContent=allOps.length;
-  const pendingShow=pending.slice(-30).reverse();document.getElementById('aPendingList').innerHTML=pendingShow.length?pendingShow.map(adminOpHTML).join('')+(pending.length>30?`<p style="text-align:center;color:var(--muted);padding:10px;font-size:13px">+ ${pending.length-30} عملية أقدم — شوفهم من تاب العمليات</p>`:''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
+  document.getElementById('aPendingList').innerHTML=pending.length?pending.slice().reverse().map(adminOpHTML).join(''):'<div class="empty"><div class="ei">✅</div><p>مفيش عمليات في الانتظار</p></div>';
 }
 
 function adminOpHTML(o){
@@ -757,7 +743,7 @@ function renderAllOps(filter,reset=true){
   const more=sorted.length>_opsPage;
   const el=document.getElementById('aAllList');
   el.innerHTML=shown.map(adminOpHTML).join('')||'<div class="empty"><div class="ei">📭</div><p>مفيش عمليات</p></div>';
-  if(more){el.innerHTML+=`<div style="text-align:center;padding:14px"><button class="btn-main" style="max-width:200px;padding:10px" onclick="_opsPage+=50;renderAllOps('${filter}',false)">تحميل المزيد (${sorted.length-_opsPage} باقي)</button></div>`;}
+  if(more)el.innerHTML+=`<div style="text-align:center;padding:14px"><button class="btn-main" style="max-width:200px;padding:10px" onclick="_opsPage+=50;renderAllOps('${filter}',false)">تحميل المزيد (${sorted.length-_opsPage} باقي)</button></div>`;
 }
 function filterOps(f){renderAllOps(f);}
 function applyFilters(){renderAllOps(_currentFilter);}
@@ -765,111 +751,64 @@ function applyFilters(){renderAllOps(_currentFilter);}
 function calcRewards(){
   const tAmt=parseInt(document.getElementById('techAmt').value)||150;
   const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
-  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const monthNames=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const approved=allOps.filter(o=>o.status==='approved');
-  const el=document.getElementById('rewardList');
-  const res=document.getElementById('rewardResult');
+  const el=document.getElementById('rewardList');const res=document.getElementById('rewardResult');
   if(!approved.length){el.innerHTML='<div class="empty"><div class="ei">📊</div><p>مفيش عمليات معتمدة</p></div>';res.style.display='block';return;}
-
-  // تجميع حسب الشهر
   const byMonth={};
-  approved.forEach(o=>{
-    const m=o.month;
-    if(!byMonth[m])byMonth[m]={};
-    if(!byMonth[m][o.user])byMonth[m][o.user]={type:o.type,count:0};
-    byMonth[m][o.user].count++;
-  });
-
-  let html='';
-  let grandTotal=0;
-  const grandSummary={};
-
-  // عرض كل شهر
+  approved.forEach(o=>{const m=o.month;if(!byMonth[m])byMonth[m]={};if(!byMonth[m][o.user])byMonth[m][o.user]={type:o.type,count:0};byMonth[m][o.user].count++;});
+  let html='',grandTotal=0;const grandSummary={};
   Object.keys(byMonth).sort((a,b)=>Number(a)-Number(b)).forEach(m=>{
-    const summary=byMonth[m];
-    const sorted=Object.entries(summary).sort((a,b)=>b[1].count-a[1].count);
-    let monthTotal=0;
-    let monthHtml='';
+    const sorted=Object.entries(byMonth[m]).sort((a,b)=>b[1].count-a[1].count);
+    let monthTotal=0,monthHtml='';
     sorted.forEach(([user,d])=>{
-      const amt=d.type==='technician'?tAmt:sAmt;
-      const reward=d.count*amt;
+      const amt=d.type==='technician'?tAmt:sAmt;const reward=d.count*amt;
       monthTotal+=reward;grandTotal+=reward;
       if(!grandSummary[user])grandSummary[user]={type:d.type,count:0,total:0};
       grandSummary[user].count+=d.count;grandSummary[user].total+=reward;
       monthHtml+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية × ${amt} ج</div></div><div class="reward-amt">${reward} ج</div></div>`;
     });
-    html+=`<div class="card" style="margin-bottom:12px">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>📅 ${months[Number(m)]}</span>
-        <span style="color:var(--success);font-size:16px;font-weight:900">${monthTotal} ج</span>
-      </div>
-      ${monthHtml}
-    </div>`;
+    html+=`<div class="card" style="margin-bottom:12px"><div class="card-title" style="display:flex;justify-content:space-between"><span>📅 ${monthNames[Number(m)]}</span><span style="color:var(--success);font-size:16px;font-weight:900">${monthTotal} ج</span></div>${monthHtml}</div>`;
   });
-
-  // الإجمالي الكلي
   if(Object.keys(byMonth).length>1){
-    const grandSorted=Object.entries(grandSummary).sort((a,b)=>b[1].total-a[1].total);
     let grandHtml='';
-    grandSorted.forEach(([user,d])=>{
-      grandHtml+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية إجمالي</div></div><div class="reward-amt">${d.total} ج</div></div>`;
-    });
-    html+=`<div class="card" style="border:2px solid var(--navy);margin-bottom:12px">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>💰 الإجمالي الكلي</span>
-        <span style="color:var(--navy);font-size:20px;font-weight:900">${grandTotal} ج</span>
-      </div>
-      ${grandHtml}
-    </div>`;
+    Object.entries(grandSummary).sort((a,b)=>b[1].total-a[1].total).forEach(([user,d])=>{grandHtml+=`<div class="reward-item"><div><div class="reward-name">${user}</div><div class="reward-role">${d.type==='technician'?'🔧 فني':'💼 مبيعات'} | ${d.count} عملية إجمالي</div></div><div class="reward-amt">${d.total} ج</div></div>`;});
+    html+=`<div class="card" style="border:2px solid var(--navy);margin-bottom:12px"><div class="card-title" style="display:flex;justify-content:space-between"><span>💰 الإجمالي الكلي</span><span style="color:var(--navy);font-size:20px;font-weight:900">${grandTotal} ج</span></div>${grandHtml}</div>`;
   }
-
   el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
 }
 
 function exportRewardsExcel(){
   const tAmt=parseInt(document.getElementById('techAmt').value)||150;
   const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
-  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const monthNames=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const approved=allOps.filter(o=>o.status==='approved');
   if(!approved.length){alert('مفيش عمليات معتمدة');return;}
-  // تجميع حسب الشهر والمستخدم
   const byMonth={};
-  approved.forEach(o=>{
-    const m=o.month;
-    if(!byMonth[m])byMonth[m]={};
-    if(!byMonth[m][o.user])byMonth[m][o.user]={type:o.type,count:0};
-    byMonth[m][o.user].count++;
-  });
-  let csv='الشهر,الاسم,الدور,عدد العمليات,المكافأة بالجنيه
-';
-  const grandSummary={};
+  approved.forEach(o=>{const m=o.month;if(!byMonth[m])byMonth[m]={};if(!byMonth[m][o.user])byMonth[m][o.user]={type:o.type,count:0};byMonth[m][o.user].count++;});
+  const rows=[String.fromCharCode(0xFEFF)+'الشهر,الاسم,الدور,عدد العمليات,المكافاة'];
+  const grand={};
   Object.keys(byMonth).sort((a,b)=>Number(a)-Number(b)).forEach(m=>{
-    const summary=byMonth[m];
-    Object.entries(summary).sort((a,b)=>b[1].count-a[1].count).forEach(([user,d])=>{
-      const amt=d.type==='technician'?tAmt:sAmt;
-      const reward=d.count*amt;
-      csv+=`${months[Number(m)]},${user},${d.type==='technician'?'فني':'مبيعات'},${d.count},${reward}
-`;
-      if(!grandSummary[user])grandSummary[user]={type:d.type,count:0,total:0};
-      grandSummary[user].count+=d.count;grandSummary[user].total+=reward;
+    Object.entries(byMonth[m]).sort((a,b)=>b[1].count-a[1].count).forEach(([user,d])=>{
+      const amt=d.type==='technician'?tAmt:sAmt;const reward=d.count*amt;
+      rows.push(monthNames[Number(m)]+','+user+','+(d.type==='technician'?'فني':'مبيعات')+','+d.count+','+reward);
+      if(!grand[user])grand[user]={type:d.type,count:0,total:0};
+      grand[user].count+=d.count;grand[user].total+=reward;
     });
-    csv+='
-';
+    rows.push('');
   });
-  csv+='الإجمالي الكلي,,,,
-';
-  Object.entries(grandSummary).sort((a,b)=>b[1].total-a[1].total).forEach(([user,d])=>{
-    csv+=`,${user},${d.type==='technician'?'فني':'مبيعات'},${d.count} عملية,${d.total}
-`;
+  rows.push('الاجمالي,,,,');
+  Object.entries(grand).sort((a,b)=>b[1].total-a[1].total).forEach(([user,d])=>{
+    rows.push(','+user+','+(d.type==='technician'?'فني':'مبيعات')+','+d.count+','+d.total);
   });
-  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const blob=new Blob([rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='مكافآت_condor_'+new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')+'.csv';a.click();
+  const a=document.createElement('a');a.href=url;a.download='makafaat.csv';a.click();
   URL.revokeObjectURL(url);
 }
 
-setInterval(()=>{if(currentRole)loadOps();resyncPendingOps();resyncPendingUpdates();},30000);
-resyncPendingOps();resyncPendingUpdates();
+setInterval(()=>{if(currentRole)loadOps();resyncPendingOps();},30000);
+resyncPendingOps();
 </script>
 </body>
 </html>
