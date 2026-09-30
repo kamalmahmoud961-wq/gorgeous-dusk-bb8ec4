@@ -313,6 +313,21 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
       <button class="tab" onclick="filterOps('technician')" id="fTech">فنيين</button>
       <button class="tab" onclick="filterOps('sales')" id="fSales">مبيعات</button>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+      <select id="filterMonth" onchange="applyFilters()" style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:13px;outline:none;background:white">
+        <option value="">كل الشهور</option>
+        <option value="0">يناير</option><option value="1">فبراير</option><option value="2">مارس</option>
+        <option value="3">أبريل</option><option value="4">مايو</option><option value="5">يونيو</option>
+        <option value="6">يوليو</option><option value="7">أغسطس</option><option value="8">سبتمبر</option>
+        <option value="9">أكتوبر</option><option value="10">نوفمبر</option><option value="11">ديسمبر</option>
+      </select>
+      <select id="filterStatus" onchange="applyFilters()" style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:13px;outline:none;background:white">
+        <option value="">كل الحالات</option>
+        <option value="pending">انتظار</option>
+        <option value="approved">معتمد</option>
+        <option value="rejected">مرفوض</option>
+      </select>
+    </div>
     <div id="aAllList"><div class="loading"><div class="spinner"></div></div></div>
   </div>
   <div id="adminRewards" class="content" style="display:none">
@@ -323,6 +338,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--gray);color
       <div class="fg"><label>مكافأة الفني (لكل تركيب) - جنيه</label><input type="number" id="techAmt" value="150" min="0"></div>
       <div class="fg"><label>مكافأة المبيعات (لكل بيعة) - جنيه</label><input type="number" id="salesAmt" value="150" min="0"></div>
       <button class="btn-main" onclick="calcRewards()">حساب المكافآت</button>
+    <button class="btn-main" style="margin-top:8px;background:linear-gradient(135deg,#065f46,#16a34a)" onclick="exportRewardsExcel()">📥 تصدير Excel</button>
     </div>
     <div class="card" id="rewardResult" style="display:none"><div class="card-title">📊 نتيجة المكافآت</div><div id="rewardList"></div></div>
     <div class="card"><div class="card-title">🏆 ترتيب أفضل المستخدمين</div><div id="adminLeaderboard"></div></div>
@@ -726,11 +742,16 @@ function adminOpHTML(o){
   return `<div class="aop"><div class="aop-head"><div><div class="op-name">${main}${syncBadge}</div><div class="op-meta">${o.date}</div></div>${badge}</div>${actions}</div>`;
 }
 
-let _opsPage=50;
+let _opsPage=50,_currentFilter='all';
 function renderAllOps(filter,reset=true){
+  _currentFilter=filter;
   ['all','technician','sales'].forEach(f=>{document.getElementById(f==='all'?'fAll':f==='technician'?'fTech':'fSales').classList.toggle('active',f===filter);});
   if(reset)_opsPage=50;
+  const monthVal=document.getElementById('filterMonth')?.value;
+  const statusVal=document.getElementById('filterStatus')?.value;
   let ops=filter==='all'?allOps:allOps.filter(o=>o.type===filter);
+  if(monthVal!==''&&monthVal!==undefined)ops=ops.filter(o=>String(o.month)===String(monthVal));
+  if(statusVal)ops=ops.filter(o=>o.status===statusVal);
   const sorted=ops.slice().reverse();
   const shown=sorted.slice(0,_opsPage);
   const more=sorted.length>_opsPage;
@@ -739,6 +760,7 @@ function renderAllOps(filter,reset=true){
   if(more){el.innerHTML+=`<div style="text-align:center;padding:14px"><button class="btn-main" style="max-width:200px;padding:10px" onclick="_opsPage+=50;renderAllOps('${filter}',false)">تحميل المزيد (${sorted.length-_opsPage} باقي)</button></div>`;}
 }
 function filterOps(f){renderAllOps(f);}
+function applyFilters(){renderAllOps(_currentFilter);}
 
 function calcRewards(){
   const tAmt=parseInt(document.getElementById('techAmt').value)||150;
@@ -802,6 +824,48 @@ function calcRewards(){
   }
 
   el.innerHTML=html;res.style.display='block';renderLeaderboard('adminLeaderboard');
+}
+
+function exportRewardsExcel(){
+  const tAmt=parseInt(document.getElementById('techAmt').value)||150;
+  const sAmt=parseInt(document.getElementById('salesAmt').value)||150;
+  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const approved=allOps.filter(o=>o.status==='approved');
+  if(!approved.length){alert('مفيش عمليات معتمدة');return;}
+  // تجميع حسب الشهر والمستخدم
+  const byMonth={};
+  approved.forEach(o=>{
+    const m=o.month;
+    if(!byMonth[m])byMonth[m]={};
+    if(!byMonth[m][o.user])byMonth[m][o.user]={type:o.type,count:0};
+    byMonth[m][o.user].count++;
+  });
+  let csv='الشهر,الاسم,الدور,عدد العمليات,المكافأة بالجنيه
+';
+  const grandSummary={};
+  Object.keys(byMonth).sort((a,b)=>Number(a)-Number(b)).forEach(m=>{
+    const summary=byMonth[m];
+    Object.entries(summary).sort((a,b)=>b[1].count-a[1].count).forEach(([user,d])=>{
+      const amt=d.type==='technician'?tAmt:sAmt;
+      const reward=d.count*amt;
+      csv+=`${months[Number(m)]},${user},${d.type==='technician'?'فني':'مبيعات'},${d.count},${reward}
+`;
+      if(!grandSummary[user])grandSummary[user]={type:d.type,count:0,total:0};
+      grandSummary[user].count+=d.count;grandSummary[user].total+=reward;
+    });
+    csv+='
+';
+  });
+  csv+='الإجمالي الكلي,,,,
+';
+  Object.entries(grandSummary).sort((a,b)=>b[1].total-a[1].total).forEach(([user,d])=>{
+    csv+=`,${user},${d.type==='technician'?'فني':'مبيعات'},${d.count} عملية,${d.total}
+`;
+  });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='مكافآت_condor_'+new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')+'.csv';a.click();
+  URL.revokeObjectURL(url);
 }
 
 setInterval(()=>{if(currentRole)loadOps();resyncPendingOps();resyncPendingUpdates();},30000);
