@@ -546,13 +546,18 @@ function adminTab(tab){
 
 async function loadOps(){
   const localOps=getLocalOps();
+  // عرض البيانات المحلية فوراً
+  if(!allOps.length){allOps=localOps;}
+  if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();
   try{
-    const r=await fetch(API+'?sheet=operations');const rows=await r.json();
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch(API+'?sheet=operations',{signal:ctrl.signal});clearTimeout(timer);
+    const rows=await r.json();
     const serverOps=rows.slice(1).map(r=>({id:String(r[0]),type:r[1],user:r[2],phone:r[3],serialIn:r[4],serialOut:r[5],client:r[6],clientPhone:r[11]||'',distributor:r[13]||'',invoice:r[14]||'',imgUrl:r[7],status:r[8],date:r[9],month:parseInt(r[10]),synced:true}));
     const serverIds=new Set(serverOps.map(o=>String(o.id)));
     const onlyLocal=localOps.filter(o=>!serverIds.has(String(o.id)));
     allOps=[...serverOps,...onlyLocal];
-  }catch(e){allOps=localOps;}
+  }catch(e){allOps=allOps.length?allOps:localOps;}
   if(currentRole==='technician')renderTechHome();else if(currentRole==='sales')renderSalesHome();else renderAdminHome();
   updateSyncBanner();
 }
